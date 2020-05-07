@@ -1,0 +1,669 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>kf.KF_class &#8212; KFTS-InSAR 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kf.KF_class</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1">############################################################################@</span>
+<span class="c1">#Assimilation of measured phase : Kalman Filter for (synthetic) INSAR data </span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1">#Date : February 2018</span>
+<span class="c1">#Author : Manon Dalaison &amp; Romain Jolivet</span>
+<span class="c1">###########################################################################@</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="kn">import</span> <span class="nb">str</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="kn">import</span> <span class="nb">range</span>
+<span class="kn">from</span> <span class="nn">past.utils</span> <span class="kn">import</span> <span class="n">old_div</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">os</span>        <span class="c1">#using operating system dependent functionality.</span>
+<span class="kn">import</span> <span class="nn">h5py</span>
+<span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">TIME</span>
+
+<span class="c1"># Local stuff</span>
+<span class="c1">#import insar_fct</span>
+<span class="c1">#from timefunction import TimeFct</span>
+
+<span class="c1">###############################################################################     </span>
+<span class="c1"># A class for the Kalman filter</span>
+    
+<div class="viewcode-block" id="Kalman"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman">[docs]</a><span class="k">class</span> <span class="nc">Kalman</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">fctmod</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Class for a Kalman filter for an InSAR time series analysis</span>
+<span class="sd">        Initialize the object</span>
+<span class="sd">        Args:</span>
+<span class="sd">            * data    : observations/measurements in class from readimput_mpi.py</span>
+<span class="sd">            * fctmod  : functional model in class from timefunction.py</span>
+<span class="sd">        Options :</span>
+<span class="sd">            * j,i   : indexes for 2-D image used for storage</span>
+<span class="sd">            * verbose  : print stuffs&#39;&#39;&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+        <span class="c1">### Extract model from class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span>  <span class="o">=</span> <span class="n">fctmod</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span>     <span class="o">=</span> <span class="n">fctmod</span><span class="o">.</span><span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">L</span>         <span class="o">=</span> <span class="n">fctmod</span><span class="o">.</span><span class="n">L</span>
+        
+        <span class="c1">### Store essential information</span>
+        <span class="c1">#self.dataobj = data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span>    <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">igram</span><span class="p">[:,</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span>       <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">link</span>    <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">links</span><span class="p">[:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Rdat</span>    <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">R</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="c1"># For 2D store index of pixels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xi</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yi</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">miny</span> <span class="o">+</span><span class="n">j</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">rank</span>
+        
+        <span class="k">assert</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">igram</span><span class="p">[:,</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="s1">&#39;rows of links should correspond to numb of interfero&#39;</span>
+    
+    
+<div class="viewcode-block" id="Kalman.restart_from_file"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.restart_from_file">[docs]</a>    <span class="k">def</span> <span class="nf">restart_from_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fin</span><span class="p">,</span><span class="n">pasttime</span><span class="p">,</span><span class="n">indxs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Extract initial condition from OPENED infile (fin)  which stores previously </span>
+<span class="sd">        computed mk and Pk for all pixels including pixel[i,j]</span>
+<span class="sd">            * fin      : opened H5 file containing formely computed state </span>
+<span class="sd">            * pasttime : already loaded time array in fin</span>
+<span class="sd">            * indxs    : already loaded index array&#39;&#39;&#39;</span>
+        
+        <span class="n">i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yi</span>
+        
+        <span class="c1"># Load Previously computed state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span>        <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;state&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">,:]</span>        <span class="c1">#3D (y,x,m)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span>        <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;state_cov&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">,:,:]</span>  <span class="c1">#3D (y,x,P)</span>
+        
+        <span class="c1"># Keep strack of where we are with respect to first data of time series</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span>  <span class="o">=</span> <span class="n">indxs</span><span class="p">[:]</span>                   <span class="c1">#indexes of phases in m after prediction phase </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span>        <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">pasttime</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span>        <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)</span>                 
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">t</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">):</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">phases</span>   <span class="o">=</span> <span class="p">[]</span>                         <span class="c1">#phases already computed </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std</span>      <span class="o">=</span> <span class="p">[]</span>                         <span class="c1">#std of phases already computed</span>
+        
+        <span class="c1"># Check consistency</span>
+        <span class="n">len_m0</span>      <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">pasttime</span><span class="p">)</span>     <span class="c1">#number of parameters in the m stored, define initial model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Lref</span>   <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span>                              <span class="c1">#max number of parameters as predicted by the model</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_model_from_num_of_param</span><span class="p">(</span><span class="n">len_m0</span><span class="p">)</span>
+               
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">):</span>  
+            <span class="c1">#WARNING: columns of links and time must be of same length, modify links</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">link</span>   <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">[:,</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">):]</span></div>
+
+    
+<div class="viewcode-block" id="Kalman.start_new"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.start_new">[docs]</a>    <span class="k">def</span> <span class="nf">start_new</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">m0</span><span class="p">,</span> <span class="n">P0</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Start from skratches</span>
+<span class="sd">            * m0    : Initial Model (1D array) </span>
+<span class="sd">                      The length of the vector will determine how many element of the model </span>
+<span class="sd">                      will be kept (in the order given in the model vector) </span>
+<span class="sd">            * P0    : Initial Covariance (array)&#39;&#39;&#39;</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span>       <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">m0</span><span class="p">,[</span><span class="mf">0.0</span><span class="p">]))</span> <span class="c1">#first phase fixed to zero</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span>       <span class="o">=</span> <span class="n">P0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1">#indexes of phases in m after prediction phase</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phases</span>  <span class="o">=</span> <span class="p">[]</span>    <span class="c1">#store phases that converged and removed from m </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std</span>     <span class="o">=</span> <span class="p">[]</span>    <span class="c1">#std of phases already computed</span>
+                
+        <span class="bp">self</span><span class="o">.</span><span class="n">Lref</span>   <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span>     <span class="c1">#max number of model parameters (take it from TimeFct)</span>
+                        
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_model_from_num_of_param</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">m0</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)),</span> <span class="s1">&#39;columns of links and time must be of same length&#39;</span></div>
+         
+<div class="viewcode-block" id="Kalman.get_model_from_num_of_param"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.get_model_from_num_of_param">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_from_num_of_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        Truncate model if the number of parameters in the input (N)</span>
+<span class="sd">        is smaller than the maximum number of parameters as predicted </span>
+<span class="sd">        by the initial functional model (self.Lref). </span>
+<span class="sd">        N (or equivalently self.L) may increase with latter iterations&#39;&#39;&#39;</span>
+        
+        <span class="k">assert</span> <span class="n">N</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Lref</span><span class="p">,</span> <span class="s1">&#39;number of apriori parameters greater than what model predicts&#39;</span>
+        
+        <span class="k">if</span> <span class="n">N</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Lref</span><span class="p">:</span>    
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Truncate model&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">cut_model</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="c1">#new truncated model (list of tuples)</span></div>
+                                         <span class="c1">#new self.L defined as N</span>
+      
+<div class="viewcode-block" id="Kalman.create_Q"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.create_Q">[docs]</a>    <span class="k">def</span> <span class="nf">create_Q</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span><span class="p">,</span> <span class="n">M</span><span class="p">):</span> 
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create process covariance Q from incertitude on model (m_err)</span>
+<span class="sd">        and interferograms (phi_err) at kth time. </span>
+<span class="sd">            * m_err : can be a float or an array of length L </span>
+<span class="sd">            * M     : the state vector length &#39;&#39;&#39;</span>
+        
+        <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span> 
+            
+        <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">m_err</span><span class="p">,</span><span class="nb">float</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m_err</span><span class="p">,</span><span class="nb">int</span><span class="p">))</span> <span class="p">:</span> <span class="c1">#check if float or int</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">m_err</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="p">)[:</span><span class="n">L</span><span class="p">],</span><span class="n">phi_err</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="p">)[</span><span class="n">L</span><span class="p">:]))</span> 
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">m_err</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">L</span> <span class="p">:</span>
+            <span class="n">Q1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">m_err</span><span class="p">[:</span><span class="n">L</span><span class="p">]),</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">L</span><span class="p">,</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="o">-</span><span class="n">L</span><span class="p">))))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">Q1</span><span class="p">,</span><span class="n">phi_err</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="p">)[</span><span class="n">L</span><span class="p">:]))</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;format m_err not understood&#39;</span>
+        
+        <span class="k">if</span> <span class="n">M</span> <span class="o">&gt;=</span> <span class="n">L</span><span class="o">+</span><span class="mi">1</span> <span class="p">:</span> <span class="c1">#not first iteration</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Q</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">add_err</span>  <span class="c1">#large error associated to last a priori value</span></div>
+            
+<div class="viewcode-block" id="Kalman.create_H_R_and_D"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.create_H_R_and_D">[docs]</a>    <span class="k">def</span> <span class="nf">create_H_R_and_D</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">indxs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Produce the measurement vector (D), the measurement matrix (H), and </span>
+<span class="sd">        the measurement covariance matrix (R) at a specific timestep (0≤ k &lt;N) </span>
+<span class="sd">        --&gt; if len(D)=n for this timestep, then H will be (n x (L+k+1)) and R (n x n)</span>
+<span class="sd">        indx  : indexes of phases store in self.m[L:]&#39;&#39;&#39;</span>
+        
+        
+        <span class="c1">#find interferograms for time k</span>
+        <span class="n">last_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">])][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span>  <span class="n">last_column</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">:</span>   <span class="c1">#when youngest-oldest </span>
+            <span class="n">ind_interf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">hh</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">[:,</span><span class="n">k</span><span class="p">])</span> <span class="k">if</span> <span class="n">hh</span><span class="o">==</span><span class="mf">1.</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">last_column</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="p">:</span>  <span class="c1">#when oldest-youngest</span>
+            <span class="n">ind_interf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">hh</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">[:,</span><span class="n">k</span><span class="p">])</span> <span class="k">if</span> <span class="n">hh</span><span class="o">==</span> <span class="o">-</span><span class="mf">1.</span><span class="p">])</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot determine if links in H are youngest-oldest or oldest-youngest&#39;</span><span class="p">)</span>
+        
+        <span class="c1">#check for NaN in D[ind_interf]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ind_interf</span><span class="p">)</span><span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span> 
+            <span class="n">mask_nan</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind_interf</span><span class="p">])</span>
+            <span class="n">ind_interf</span> <span class="o">=</span> <span class="n">ind_interf</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">mask_nan</span><span class="p">)]</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="n">ind_interf</span> <span class="o">=</span> <span class="p">[]</span>
+            
+        <span class="c1">#select relevant D and R</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ind_interf</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind_interf</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Rdat</span><span class="p">[</span><span class="n">ind_interf</span><span class="p">,:][:,</span><span class="n">ind_interf</span><span class="p">]</span>
+            <span class="n">Hsub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">[</span><span class="n">ind_interf</span><span class="p">,:</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            
+            <span class="c1">#resize if phases deleted </span>
+            <span class="n">Hsub</span> <span class="o">=</span> <span class="n">Hsub</span><span class="p">[:,</span><span class="n">indxs</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">)),</span><span class="n">Hsub</span><span class="p">))</span>
+        
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">H</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+<div class="viewcode-block" id="Kalman.predict"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">X</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">Q</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        * X : The mean state estimate of the previous step ( k −1). </span>
+<span class="sd">        * P : The state covariance of previous step ( k −1).</span>
+<span class="sd">        * A : The transition n × n matrix.</span>
+<span class="sd">        * Q : The process noise covariance matrix.&#39;&#39;&#39;</span>
+        
+        <span class="n">Xf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="n">Pf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">))</span> <span class="o">+</span> <span class="n">Q</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">Xf</span><span class="p">,</span><span class="n">Pf</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Kalman.update"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">Xf</span><span class="p">,</span> <span class="n">Pf</span><span class="p">):</span> 
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        * Xf, Pf: the predicted mean and covariance of the state (matrices)&#39;&#39;&#39;</span>
+    
+        <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">)</span>  <span class="c1"># the measurement vector</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">)</span>  <span class="c1"># the measurement matrix</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="p">)</span>  <span class="c1"># the measurement covariance matrix</span>
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span> <span class="c1">#no information for this date</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">Xf</span><span class="p">,</span><span class="n">Pf</span><span class="p">)</span>
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="c1">#Data - predictive distribution of Y</span>
+            <span class="n">inov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inovation</span><span class="p">(</span><span class="n">Xf</span><span class="p">,</span><span class="n">Y</span><span class="p">)</span>
+            <span class="c1">#the Covariance or predictive mean of Y</span>
+            <span class="n">IS</span> <span class="o">=</span> <span class="n">R</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Pf</span><span class="p">,</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">))</span> 
+            
+            <span class="c1">#the Kalman Gain matrix</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">IS</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Pf&#39;</span><span class="p">,</span> <span class="n">Pf</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="n">H</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;determinant is Zero, not invertible&#39;</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Pf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">IS</span><span class="p">)))</span>
+            
+            <span class="c1">#the estimated mean state </span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">Xf</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">,</span><span class="n">inov</span><span class="p">)</span>  <span class="c1">#Y-IM is residual or &quot;innovation vector&quot;</span>
+            
+            <span class="c1">#the estimated covariance state</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">Pf</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="n">Pf</span><span class="p">))</span>
+           
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">check_fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">P</span><span class="p">)</span>
+
+            <span class="k">return</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">P</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Kalman.inovation"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.inovation">[docs]</a>    <span class="k">def</span> <span class="nf">inovation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xf</span><span class="p">,</span> <span class="n">Y</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Compute residual or innovation vector</span>
+<span class="sd">        Innovation for phases is not informative. After a few steps,</span>
+<span class="sd">        reflects noise of data around model. &#39;&#39;&#39;</span>
+
+        <span class="c1">#the Mean of predictive distribution of Y</span>
+        <span class="n">IM</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">Xf</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">Y</span><span class="o">-</span><span class="n">IM</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Kalman.check_fit"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.check_fit">[docs]</a>    <span class="k">def</span> <span class="nf">check_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">eps_interf</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Check quality of fit of phases if verbose activated. </span>
+<span class="sd">        Compute residual weighted by its Covariance for analysed state </span>
+<span class="sd">        and print warning if pb</span>
+<span class="sd">         * eps_interf : accepted difference between computed and real interferograms.&#39;&#39;&#39;</span>
+                    
+        <span class="n">Cres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">Cres</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">inovation</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res</span><span class="p">))</span> <span class="o">&gt;</span> <span class="n">eps_interf</span> <span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;WARNING: post-fit residual too big (mean &gt;&#39;</span> <span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">eps_interf</span><span class="p">)</span><span class="o">+</span> <span class="s1">&#39;mm)&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="Kalman.reduce_sizes_m_P"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.reduce_sizes_m_P">[docs]</a>    <span class="k">def</span> <span class="nf">reduce_sizes_m_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span><span class="mi">6</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Remove phases in m if not used to build interferograms and has converged</span>
+<span class="sd">            * k     : number of iteration </span>
+<span class="sd">            * t_sep : max time separation allowed to build interferograms&#39;&#39;&#39;</span>
+
+        <span class="k">if</span> <span class="n">k</span> <span class="o">&gt;=</span> <span class="n">t_sep</span> <span class="p">:</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span>   <span class="c1">#number of parameters</span>
+            
+            <span class="c1"># apply to phases not in current interferograms (t &gt; t_sep)</span>
+            <span class="n">sub_P</span>     <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">[</span><span class="n">L</span><span class="p">:</span><span class="o">-</span><span class="p">(</span><span class="n">t_sep</span><span class="p">),</span><span class="n">L</span><span class="p">:</span><span class="o">-</span><span class="p">(</span><span class="n">t_sep</span><span class="p">)])</span>
+            <span class="n">sub_m</span>     <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[</span><span class="n">L</span><span class="p">:</span><span class="o">-</span><span class="p">(</span><span class="n">t_sep</span><span class="p">)]</span> 
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">phases</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phases</span><span class="p">,</span><span class="n">sub_m</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">std</span>     <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">,</span><span class="nb">abs</span><span class="p">(</span><span class="n">sub_P</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="n">old_div</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mf">2.</span><span class="p">)))</span>  <span class="c1">#sqrt of variance        </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="p">[</span><span class="o">-</span><span class="n">t_sep</span><span class="p">:]</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">,</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">)</span><span class="o">-</span><span class="n">t_sep</span><span class="p">)),</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#row</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">,</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">)</span><span class="o">-</span><span class="n">t_sep</span><span class="p">)),</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#column</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[:</span><span class="n">L</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[</span><span class="o">-</span><span class="n">t_sep</span><span class="p">:]))</span>
+        
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;ERROR: Pb in reshape, P not square matrix&#39;</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">),</span><span class="s1">&#39;ERROR: shape of m and P do not match&#39;</span></div>
+        
+    
+<div class="viewcode-block" id="Kalman.expend_m_P"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.expend_m_P">[docs]</a>    <span class="k">def</span> <span class="nf">expend_m_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">L</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">PL</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Open state vector and covariance (m and P) to add building parameters</span>
+<span class="sd">            * L  : index at which we open and insert new parameters in m and P</span>
+<span class="sd">            * n  : number of parameters to add </span>
+<span class="sd">            * PL : apriori variance of the new parameters&#39;&#39;&#39;</span>
+        
+        <span class="c1">#increase size of m </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[:</span><span class="n">L</span><span class="p">],</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[</span><span class="n">L</span><span class="p">:]))</span>
+        
+        <span class="c1">#extend P</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="n">L</span><span class="o">+</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">col</span><span class="p">[</span><span class="n">L</span><span class="p">]</span> <span class="o">=</span> <span class="n">PL</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">row</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">col</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Kalman.detect_event"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.detect_event">[docs]</a>    <span class="k">def</span> <span class="nf">detect_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">kmod</span><span class="p">,</span><span class="n">m_all</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        IN PROGRESS TESTED ON SYNTHETIC DATA</span>
+<span class="sd">        Add model parameter for unexpected events not in model</span>
+<span class="sd">            * k : iteration</span>
+<span class="sd">            * kmod : minimum k at which modification can be applied&#39;&#39;&#39;</span>
+        
+        <span class="c1"># Test for sharp variations in model parameters</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m_all</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">condition</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">params</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="o">/</span><span class="mf">2.</span> <span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">])</span>
+        
+        <span class="c1">#sig_y  = 15.0 </span>
+        <span class="c1">#vel_all = [i[1] for i in m_all[-5:-1]]</span>
+        <span class="c1">#condition = abs(np.mean(np.diff(vel_all))) &gt; sig_y/self.t[k]*1./(len(vel_all)-1)</span>
+        
+        <span class="k">if</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="n">kmod</span> <span class="ow">and</span> <span class="n">condition</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;They may be an unexpected event&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">params</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)))))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mf">2.</span> <span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">]))</span>
+            
+            <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            if k &gt;= kmod_min-1 and self.Lss &gt; 1 :</span>
+<span class="sd">                #reevaluate length of Lss</span>
+<span class="sd">                Amps = self.m[self.L+self.Leq:self.L+self.Leq+self.Lss]</span>
+<span class="sd">                mask = Amps &gt; 1/100.*max(Amps)            #want to keep significant terms only</span>
+<span class="sd">                rem_i = np.array(range(len(Amps)))[np.invert(mask)] #indexs to remove</span>
+<span class="sd">                Amps = Amps[mask]                         #to keep</span>
+<span class="sd">            </span>
+<span class="sd">                print &#39;clean phase&#39;</span>
+<span class="sd">                print self.st</span>
+<span class="sd">                self.st = self.st[mask]</span>
+<span class="sd">                self.m = np.concatenate((self.m[:(self.L+self.Leq)],Amps,self.m[(self.L+self.Leq+self.Lss):]))</span>
+<span class="sd">                print self.st</span>
+
+<span class="sd">                self.P = np.delete(self.P,self.L+self.Leq+rem_i,0) #row</span>
+<span class="sd">                self.P = np.delete(self.P,self.L+self.Leq+rem_i,1) #column</span>
+
+<span class="sd">                self.Lss = len(Amps)</span>
+<span class="sd">            </span>
+<span class="sd">            if k &gt; kmod_min and conditions :  #compare velocity terms  </span>
+<span class="sd">                print &#39;diff between vel&#39;, np.diff(vel_all)</span>
+<span class="sd">                print &#39;mean change in vel&#39;, abs(np.mean(np.diff(vel_all)))</span>
+<span class="sd">                print &#39;max crit&#39;, sig_y/self.t[k]*1./(len(vel_all)-1)</span>
+
+<span class="sd">                dt = int(round(2*self.swidth/6))         #how early can the ss be detected?</span>
+<span class="sd">                add_times = [self.t[k+dt-5],self.t[k+dt-3]] #times to test</span>
+<span class="sd">                self.st = np.append(self.st,add_times) </span>
+<span class="sd">                </span>
+<span class="sd">                L = self.L + self.Leq + self.Lss        #where we split m to insert new param</span>
+<span class="sd">                </span>
+<span class="sd">                print &#39;add slowslip&#39;, self.t[k]</span>
+<span class="sd">                </span>
+<span class="sd">                self.expend_m_P(L,len(add_times),100.**2.) </span>
+<span class="sd">                self.m[1] = m_all[-3][1]</span>
+<span class="sd">                self.Lss += len(add_times) </span>
+<span class="sd">                </span>
+<span class="sd">                kmod_min = k + dt + 2     #time to wait for adjustement of amplitude before chacking for new ss </span>
+<span class="sd">                if kmod_min &gt;= len(self.t):</span>
+<span class="sd">                    kmod_min = len(self.t)&#39;&#39;&#39;</span></div>
+
+<div class="viewcode-block" id="Kalman.kf"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.kf">[docs]</a>    <span class="k">def</span> <span class="nf">kf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">plots</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cm</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="n">ax1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ax2</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Run kalman filter combining functions above (i.e. MAIN)</span>
+<span class="sd">            * m_err   : systematic error on model (should be 0)</span>
+<span class="sd">            * phi_err : systematic error on interferograms (should be 0)</span>
+<span class="sd">        </span>
+<span class="sd">        If plots=True (use when one instance of KF (=one pixel)):</span>
+<span class="sd">            * ax1 : in which plot evolution of parameters</span>
+<span class="sd">            * ax2 : in which plot evolution of predicted value and model</span>
+<span class="sd">            * cm  : the colormap of reference later discretised </span>
+<span class="sd">            </span>
+<span class="sd">        To constrain the evolution of the number of parameters :</span>
+<span class="sd">            * t_sep : maximum time separation between interferograms, fix the minimum</span>
+<span class="sd">                      number of phases that must be kept in the state vector</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="c1">#Prepare storage array       </span>
+        <span class="n">kmod</span> <span class="o">=</span> <span class="mi">13</span>        <span class="c1">#int from which parameters can be added</span>
+        <span class="n">m_all</span> <span class="o">=</span> <span class="p">[]</span>       <span class="c1">#store state vector at each k in list of lists</span>
+        
+        <span class="c1">#Get where to start itterations</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="p">)</span><span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">),</span><span class="s1">&#39;ERROR: more phases computed than dates to work on&#39;</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">),</span><span class="s1">&#39;ERROR: from array size, no NEW phase to compute&#39;</span>
+       
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1">#indx of first phase (in this KF update) wrt the initial reference at t0</span>
+        <span class="n">k_start</span>   <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="p">)</span> <span class="c1">#number of phases in m from start (that will be reanalysed/updated)</span>
+        <span class="n">k_end</span>     <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)</span>       <span class="c1">#number of dates in time series (final number of phase estimates)</span>
+        
+        <span class="c1">#Initialize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">create_A</span><span class="p">(</span><span class="n">k_start</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_Q</span><span class="p">(</span><span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">))</span>
+        
+        <span class="n">Innov</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">Gain</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">#Loop on time</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k_start</span><span class="p">,</span><span class="n">k_end</span><span class="p">):</span> 
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">idx0</span><span class="o">+</span><span class="n">k</span><span class="p">)</span> <span class="c1">#add last phase index </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">create_H_R_and_D</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">idx0</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="p">])</span>
+            
+            <span class="p">(</span><span class="n">mf</span><span class="p">,</span><span class="n">Pf</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Q</span><span class="p">)</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">mf</span><span class="p">,</span> <span class="n">Pf</span><span class="p">)</span>
+            
+            <span class="c1">#store info</span>
+            <span class="c1">#Gain.extend( [np.linalg.norm(self.K[-1,:])] )</span>
+            <span class="c1">#Innov.extend( [np.mean(np.array(self.D) -np.dot(np.array(self.H), mf))])</span>
+            
+            <span class="c1">#Reduce size of m (part with phases)</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">&gt;=</span> <span class="n">t_sep</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reduce_sizes_m_P</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span><span class="n">t_sep</span><span class="p">)</span>
+            
+            <span class="c1">#OPTION ONLY TESTED ON SYNTHETICS</span>
+            <span class="c1">#Add building parameters based on observations</span>
+            <span class="c1">#m_all.append(self.m.copy())</span>
+            <span class="c1">#self.detect_event(k,kmod,m_all)</span>
+            
+            <span class="k">if</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="n">k_end</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>  <span class="c1">#not last step</span>
+                
+                <span class="c1">#if number of parameters smaller than in ref</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Lref</span> <span class="p">:</span> 
+                    <span class="c1">#Add model element when getting close to relevant date</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">mod</span><span class="p">,</span><span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">expend_model</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">expend_m_P</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">-</span><span class="n">n</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="mf">70.</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span> <span class="c1">#L already increased in timefunction</span>
+
+                <span class="c1">#Update matrices</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">create_Q</span><span class="p">(</span><span class="n">m_err</span><span class="p">,</span><span class="n">phi_err</span><span class="p">,</span><span class="n">add_err</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">create_A</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">))</span>
+            
+            <span class="c1">#Plot</span>
+            <span class="k">if</span> <span class="n">plots</span> <span class="o">==</span> <span class="kc">True</span> <span class="p">:</span> 
+                <span class="n">cmap</span> <span class="o">=</span> <span class="p">[</span><span class="n">cm</span><span class="p">(</span><span class="mf">1.</span><span class="o">*</span><span class="n">i</span><span class="o">/</span><span class="n">k_end</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k_end</span><span class="p">)]</span> 
+                <span class="k">if</span> <span class="n">ax1</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">plot_params</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">ax1</span><span class="p">[</span><span class="mi">0</span><span class="p">,:],</span><span class="n">cmap</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">plot_gain</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">ax1</span><span class="p">[</span><span class="mi">1</span><span class="p">,:],</span><span class="n">cmap</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">plot_params</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">ax1</span><span class="p">,</span><span class="n">cmap</span><span class="p">)</span>
+                    
+                <span class="k">if</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="mi">5</span> <span class="p">:</span> <span class="c1">#do not plot first poorly fitting models</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">plot_model</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">ax2</span><span class="p">,</span><span class="n">cmap</span><span class="p">)</span>
+                
+            <span class="c1">###END loop</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">phases</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">phases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">:]))</span>
+        <span class="n">std_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">:,</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">:]))</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mf">2.</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="n">std_all</span>
+        
+        <span class="k">if</span> <span class="n">plots</span> <span class="o">==</span> <span class="kc">True</span> <span class="p">:</span> 
+            <span class="n">ax2</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[:],</span><span class="bp">self</span><span class="o">.</span><span class="n">phases</span><span class="p">,</span><span class="n">yerr</span><span class="o">=</span><span class="n">std_all</span><span class="p">,</span>\
+                            <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;pink&#39;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;retrieved phases&#39;</span><span class="p">,</span><span class="n">markersize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+            <span class="n">ax2</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Time (days)&#39;</span><span class="p">)</span>
+            <span class="n">ax2</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Displacement (mm)&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">title_labels</span><span class="p">(</span><span class="n">ax1</span><span class="p">)</span>
+        
+        <span class="c1">#self.Gain = Gain</span>
+        <span class="c1">#self.Innov = Innov</span>
+        <span class="k">return</span></div>
+            
+<div class="viewcode-block" id="Kalman.write_output"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.write_output">[docs]</a>    <span class="k">def</span> <span class="nf">write_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outstates</span><span class="p">,</span> <span class="n">outphase</span><span class="p">,</span> <span class="n">Ny</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">Nx</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Save outputs of kalman filter for next run </span>
+<span class="sd">            * outstates : Open h5file for state storage</span>
+<span class="sd">            * outphase  : Open h5file for phase storage</span>
+<span class="sd">        When iterative storage (2D case)</span>
+<span class="sd">            * Ny, Nx  : the number of pixels in each direction</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yi</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">outstates</span><span class="p">[</span><span class="s1">&#39;indx&#39;</span><span class="p">][:])</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>  <span class="c1">#check if empty </span>
+            <span class="c1">#Store pixel independent information</span>
+            <span class="n">outstates</span><span class="p">[</span><span class="s1">&#39;indx&#39;</span><span class="p">][:]</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span>
+            <span class="n">outstates</span><span class="p">[</span><span class="s1">&#39;tims&#39;</span><span class="p">][:]</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">idx0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">idx0</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">outphase</span><span class="p">[</span><span class="s1">&#39;idx0&#39;</span><span class="p">][</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idx0</span>
+            <span class="n">outphase</span><span class="p">[</span><span class="s1">&#39;tims&#39;</span><span class="p">][:]</span>   <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span>
+        
+        <span class="c1">#Fill in with new data</span>
+        <span class="n">outstates</span><span class="p">[</span><span class="s1">&#39;state&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">,:]</span>       <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span>
+        <span class="n">outstates</span><span class="p">[</span><span class="s1">&#39;state_cov&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">P</span>
+        <span class="n">outphase</span><span class="p">[</span><span class="s1">&#39;rawts&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">,:]</span>        <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">phases</span>
+        <span class="n">outphase</span><span class="p">[</span><span class="s1">&#39;rawts_std&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">,:]</span>    <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span>
+            
+        <span class="c1"># All done</span>
+        <span class="k">return</span></div>
+        
+       
+<div class="viewcode-block" id="Kalman.plot_params"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.plot_params">[docs]</a>    <span class="k">def</span> <span class="nf">plot_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">ax</span><span class="p">,</span><span class="n">cmap</span><span class="p">)</span> <span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        Plot each parameter over time with its uncertainty in </span>
+<span class="sd">        subplots of size len(ax)&#39;&#39;&#39;</span> 
+        
+        <span class="n">m_plt</span><span class="p">,</span><span class="n">P_plt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">comp_phase_shift</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">],</span><span class="n">P</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">])</span>
+        <span class="n">P_plt</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">P_plt</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        
+        <span class="c1">#plot</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">):</span>
+            <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="n">k</span><span class="p">],</span><span class="n">m_plt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">yerr</span><span class="o">=</span> <span class="n">P_plt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span><span class="n">markersize</span><span class="o">=</span><span class="mf">4.5</span><span class="p">,</span>\
+                        <span class="n">c</span><span class="o">=</span><span class="n">cmap</span><span class="p">[</span><span class="n">k</span><span class="p">],</span><span class="n">elinewidth</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span><span class="n">markeredgecolor</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span><span class="n">markeredgewidth</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span></div>
+            
+    
+<div class="viewcode-block" id="Kalman.plot_gain"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.plot_gain">[docs]</a>    <span class="k">def</span> <span class="nf">plot_gain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">ax</span><span class="p">,</span><span class="n">cmap</span><span class="p">)</span> <span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plot gain for each parameter over time&#39;&#39;&#39;</span>
+        
+        <span class="n">g_l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,:],</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">g_plt</span><span class="p">,</span><span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">comp_phase_shift</span><span class="p">(</span><span class="n">g_l</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">):</span>
+            <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="n">k</span><span class="p">],</span><span class="n">g_plt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="s1">&#39;o&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="n">cmap</span><span class="p">[</span><span class="n">k</span><span class="p">],</span><span class="n">markersize</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span></div>
+            
+<div class="viewcode-block" id="Kalman.plot_model"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.plot_model">[docs]</a>    <span class="k">def</span> <span class="nf">plot_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">ax</span><span class="p">,</span><span class="n">cmap</span><span class="p">)</span> <span class="p">:</span>
+         <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">         Plot resulting model&#39;&#39;&#39;</span>
+         
+         <span class="n">Model</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">draw_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">])</span>
+         <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span><span class="n">Model</span><span class="p">,</span><span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="n">cmap</span><span class="p">[</span><span class="n">k</span><span class="p">],</span><span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Kalman.title_labels"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.title_labels">[docs]</a>    <span class="k">def</span> <span class="nf">title_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ax1</span><span class="p">)</span> <span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Add axes label and titles for subplots from plot_params and plot gain functions&#39;&#39;&#39;</span>
+         
+        <span class="k">if</span> <span class="n">ax1</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">ax1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;parameters&#39;</span><span class="p">)</span>
+            <span class="c1">#for i in range(len(ax1)):</span>
+            <span class="c1">#    ax1[i].set_xlabel(&#39;time (days)&#39;)</span>
+        <span class="k">if</span> <span class="n">ax1</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">ax1</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;gains&#39;</span><span class="p">)</span>
+            <span class="n">ax1</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;parameters&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">ax1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="n">ax1</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;time (days)&#39;</span><span class="p">)</span>
+            <span class="n">ax1</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1">#select first row of plots</span>
+        
+        <span class="c1">#Titles of subplots in fig1</span>
+        <span class="n">tltsize</span> <span class="o">=</span> <span class="mi">12</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelobj</span><span class="o">.</span><span class="n">get_label</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span> <span class="s1">&#39;mm&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="n">i</span><span class="o">=</span><span class="mi">0</span>
+        <span class="k">for</span> <span class="n">lab</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
+            <span class="n">ax1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">lab</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="n">tltsize</span><span class="p">)</span>
+            <span class="n">i</span> <span class="o">+=</span><span class="mi">1</span></div></div>
+    
+<span class="c1">#EOF</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../index.html">
+    <img class="logo" src="../../_static/Geo4DLogo.jpg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=ManonDls&repo=KFTS-InSAR&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../flow.html">2. KFTS-InSAR Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../func.html">3. Functional model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kal.html">4. Kalman Filter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fmt.html">5. Setup and formating</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../test.html">6. Synthetic data</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, M. Dalaison & R. Jolivet.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

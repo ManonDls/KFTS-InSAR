@@ -1,0 +1,365 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>kf.utils.createinput &#8212; KFTS-InSAR 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kf.utils.createinput</h1><div class="highlight"><pre>
+<span></span><span class="c1">############################################################################@</span>
+<span class="c1"># Create interferograms, reshape for Kalman filter</span>
+<span class="c1"># For 1D and 2D synthetic testing</span>
+<span class="c1"># works in python 2.7 and 3.6</span>
+<span class="c1">#</span>
+<span class="c1">#Date : July-Nov 2018</span>
+<span class="c1">#Author : Manon Dalaison </span>
+<span class="c1">###########################################################################@</span>
+
+<span class="c1">#global import </span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="kn">import</span> <span class="nb">str</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="kn">import</span> <span class="nb">range</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="kn">import</span> <span class="nb">object</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1">#Local import</span>
+<span class="kn">from</span> <span class="nn">kf.timefunction</span> <span class="kn">import</span> <span class="n">TimeFct</span>
+<span class="kn">from</span> <span class="nn">kf.utils.generateRnAtmo</span> <span class="kn">import</span> <span class="n">generateAtmo</span>
+
+<div class="viewcode-block" id="SynteticKF"><a class="viewcode-back" href="../../../test.html#kf.utils.createinput.SynteticKF">[docs]</a><span class="k">class</span> <span class="nc">SynteticKF</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        Class to initialise synthetic InSAR data to use with the Kalman Filter. </span>
+<span class="sd">        It mirrors the functions of the class ``kf.readinput.SetupKF`` </span>
+<span class="sd">        used for real observations. </span>
+<span class="sd">            :time: array of aquisitions times</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="n">time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span> <span class="n">time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orddates</span> <span class="o">=</span> <span class="n">time</span>
+        
+        <span class="c1">#useless parameter here, only to match MPI with real data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">miny</span> <span class="o">=</span> <span class="mi">0</span>
+        
+<div class="viewcode-block" id="SynteticKF.create_timeseries"><a class="viewcode-back" href="../../../test.html#kf.utils.createinput.SynteticKF.create_timeseries">[docs]</a>    <span class="k">def</span> <span class="nf">create_timeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">m_r</span><span class="p">,</span> <span class="n">sig_y</span><span class="p">,</span> <span class="n">origintime</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">atmo</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create synthetic time series from </span>
+<span class="sd">            :model:      a model with the appropriate shape for the class TimeFct</span>
+<span class="sd">            :m_r:        array/list of the multiplicating factors for each element</span>
+<span class="sd">                           of the functional model</span>
+<span class="sd">            :sig_y:      std of noise on time series</span>
+<span class="sd">            :origintime: specify initial time if not zero</span>
+<span class="sd">            :atmo:       add atmospheric noise? (bool, default False) works for 2D only</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            * the reference phases (without noise) </span>
+<span class="sd">            * the noisy phases </span>
+<span class="sd">            * the array of reference parameters with sin and cos amplitudes </span>
+<span class="sd">            transformed into amplitude and phase shift of oscillation</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+            
+        <span class="c1">#N = len(self.time)     #number of dates</span>
+        <span class="c1">#L = len(m_r)         #number of parameters</span>
+        <span class="n">m_r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">m_r</span><span class="p">)</span>
+        
+        <span class="n">fct</span> <span class="o">=</span> <span class="n">TimeFct</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">origintime</span><span class="o">=</span><span class="n">origintime</span><span class="p">)</span>
+        <span class="n">fct</span><span class="o">.</span><span class="n">check_model</span><span class="p">()</span>
+        <span class="n">m_ph</span><span class="p">,</span><span class="n">tmp</span> <span class="o">=</span> <span class="n">fct</span><span class="o">.</span><span class="n">comp_phase_shift</span><span class="p">(</span><span class="n">m_r</span><span class="p">)</span>
+        
+        <span class="n">Ref</span>   <span class="o">=</span> <span class="n">fct</span><span class="o">.</span><span class="n">draw_model</span><span class="p">(</span><span class="n">m_r</span><span class="p">)</span>       
+        <span class="n">Phas</span>  <span class="o">=</span> <span class="n">Ref</span> <span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">sig_y</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">Ref</span><span class="p">))</span> 
+        
+        <span class="k">if</span> <span class="n">Ref</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="p">:</span> 
+            <span class="k">if</span> <span class="n">atmo</span> <span class="p">:</span>
+                <span class="c1">#Add atmospheric noise to acquisitions </span>
+                <span class="n">atmnoise</span> <span class="o">=</span> <span class="n">generateAtmo</span><span class="p">((</span><span class="n">Ref</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">Ref</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>\
+                                    <span class="n">sig_y</span><span class="p">,</span><span class="mf">8.</span><span class="p">,</span><span class="n">nt</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">))</span>
+                <span class="n">Phas</span> <span class="o">+=</span> <span class="n">atmnoise</span> 
+                
+        <span class="c1"># Set first phase to Zero</span>
+        <span class="n">shift</span>        <span class="o">=</span> <span class="o">-</span><span class="n">Phas</span><span class="p">[</span><span class="o">...</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> 
+        <span class="n">m_r</span><span class="p">[</span><span class="o">...</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>   <span class="o">=</span> <span class="n">shift</span> 
+        <span class="n">m_ph</span><span class="p">[</span><span class="o">...</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>  <span class="o">=</span> <span class="n">shift</span> 
+        
+        <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span><span class="nb">float</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span><span class="nb">int</span><span class="p">)):</span>
+            <span class="n">Phas</span>  <span class="o">+=</span> <span class="n">shift</span>
+            <span class="n">Ref</span>   <span class="o">+=</span> <span class="n">shift</span>
+        <span class="k">elif</span> <span class="n">shift</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="p">:</span> 
+            <span class="n">phas</span>  <span class="o">=</span> <span class="p">[</span><span class="n">Phas</span><span class="p">[:,:,</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">shift</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">Phas</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])]</span>
+            <span class="n">ref</span>   <span class="o">=</span> <span class="p">[</span><span class="n">Ref</span><span class="p">[:,:,</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">shift</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">Ref</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])]</span>
+            <span class="n">Phas</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">phas</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>    <span class="c1">#put back defo on last index</span>
+            <span class="n">Ref</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+                
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Format not understood&quot;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span>
+        
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span> <span class="o">=</span> <span class="n">Ref</span><span class="p">,</span> <span class="n">Phas</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="p">,</span> <span class="n">m_ph</span></div>
+        
+    
+<div class="viewcode-block" id="SynteticKF.create_interfero"><a class="viewcode-back" href="../../../test.html#kf.utils.createinput.SynteticKF.create_interfero">[docs]</a>    <span class="k">def</span> <span class="nf">create_interfero</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">sig_i</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">perp_dist</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;diag&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create interferograms for synthetic phases with temporal and </span>
+<span class="sd">        perpendicular baseline constraints.</span>
+<span class="sd">            :rr:        variance in data (std**2)</span>
+<span class="sd">            :sig_i:     std of noise on phase differences</span>
+<span class="sd">            :t_sep:     time separation allowed</span>
+<span class="sd">            :perp_dist: separation of perp baseline authorise</span>
+<span class="sd">            :fmt:       define format of matrix R (&#39;diag&#39;,&#39;common_dates&#39;,&#39;num_links&#39;)</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            * interferograms (difference of phases) </span>
+<span class="sd">            * covariance matrix of interferograms </span>
+<span class="sd">            * the matrix of links between phases (# interf x # functional parameters and phases)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">Links</span> <span class="o">=</span> <span class="p">[]</span>      
+        <span class="bp">self</span><span class="o">.</span><span class="n">pair</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_tsep</span> <span class="o">=</span> <span class="n">t_sep</span>
+        
+        <span class="c1"># Generate synthetic perpendicular baseline</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">200</span><span class="p">,</span><span class="n">N</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">k</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="n">j</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">t_sep</span> <span class="p">:</span>            <span class="c1">#timesep diff max</span>
+                    <span class="n">dist</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bperp</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">bperp</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">dist</span> <span class="o">&lt;=</span> <span class="n">perp_dist</span> <span class="p">:</span>        <span class="c1">#if dist between tracks not too big </span>
+                        <span class="n">H_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>  
+                        <span class="n">H_line</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                        <span class="n">H_line</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Links</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+                            <span class="n">Links</span> <span class="o">=</span> <span class="p">[</span><span class="n">H_line</span><span class="p">]</span>
+                        <span class="k">else</span> <span class="p">:</span> 
+                            <span class="n">Links</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">Links</span><span class="p">,</span><span class="n">H_line</span><span class="p">))</span>
+                        
+                        <span class="bp">self</span><span class="o">.</span><span class="n">pair</span><span class="o">.</span><span class="n">extend</span><span class="p">([[</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]])</span>
+        
+        <span class="sd">&#39;&#39;&#39;# Add long-temporal connections</span>
+<span class="sd">        i = 20          #start at phase ...</span>
+<span class="sd">        i_amp = 20      #go back by ... dt</span>
+<span class="sd">        i_step = 10     #every ... dt</span>
+<span class="sd">        while i &lt; Links.shape[1] : </span>
+<span class="sd">            new_interf = np.zeros(Links.shape[1])</span>
+<span class="sd">            new_interf[i] = 1</span>
+<span class="sd">            new_interf[i-i_amp] = -1                 </span>
+<span class="sd">            Links = np.vstack((Links,new_interf))</span>
+<span class="sd">            self.pair.extend([[i-i_amp,i]])</span>
+<span class="sd">            i += i_step  &#39;&#39;&#39;</span>                              
+        
+        <span class="c1"># To set first phase to zero</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="n">Links</span>
+        <span class="c1">#self.links[:,0] = 0 </span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">pair</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pair</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">build_R</span><span class="p">(</span><span class="n">rr</span><span class="p">,</span><span class="n">fmt</span><span class="p">)</span>
+        
+        <span class="c1"># Build interferograms</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">:</span>
+            <span class="n">interf</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="p">)</span> \
+                    <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">sig_i</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="p">:</span> 
+            <span class="n">ny</span><span class="p">,</span><span class="n">nx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="p">,(</span><span class="n">ny</span><span class="o">*</span><span class="n">nx</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">)))</span>
+            <span class="n">interf</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="p">[</span><span class="n">j</span><span class="p">,:])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nx</span><span class="o">*</span><span class="n">ny</span><span class="p">)]</span> \
+                <span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">sig_i</span><span class="p">,(</span><span class="n">nx</span><span class="o">*</span><span class="n">ny</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span>
+        
+            <span class="c1">#reshape interferograms</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">igram</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">interf</span><span class="o">.</span><span class="n">T</span><span class="p">,(</span><span class="n">interf</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">ny</span><span class="p">,</span><span class="n">nx</span><span class="p">))</span>
+            
+            <span class="c1">#save dimensions</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Nx</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span> <span class="o">=</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">ny</span>
+        
+        <span class="c1">#All done</span>
+        <span class="k">return</span> <span class="n">interf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span></div>
+        
+<div class="viewcode-block" id="SynteticKF.build_R"><a class="viewcode-back" href="../../../test.html#kf.utils.createinput.SynteticKF.build_R">[docs]</a>    <span class="k">def</span> <span class="nf">build_R</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">rr</span><span class="p">,</span><span class="n">fmt</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            :rr:  variance (std**2) in observation (=interferograms) noise (float)</span>
+<span class="sd">            :fmt: define format of matrix R (&#39;diag&#39;,&#39;common_dates&#39;,&#39;num_links&#39;)</span>
+<span class="sd">                    --&gt; &#39;diag&#39; seems the correct option</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="n">pair</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pair</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span><span class="n">N</span><span class="p">))</span> 
+        
+        <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span><span class="s1">&#39;diag&#39;</span><span class="p">:</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">rr</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+            
+        <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span><span class="s1">&#39;common_dates&#39;</span><span class="p">:</span>
+            <span class="n">R</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">rr</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+                    <span class="n">R</span><span class="p">[</span><span class="n">q</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="mf">2.</span><span class="o">*</span><span class="n">rr</span><span class="o">*</span><span class="p">(</span><span class="n">kdelta</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="n">q</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>  
+                                        <span class="o">+</span><span class="n">kdelta</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="n">q</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+                                        <span class="o">-</span><span class="n">kdelta</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="n">q</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+                                        <span class="o">-</span><span class="n">kdelta</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="n">q</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+                    <span class="n">R</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">q</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="n">q</span><span class="p">,</span><span class="n">j</span><span class="p">]</span>  <span class="c1">#symmetry </span>
+                
+        <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span> <span class="s1">&#39;num_links&#39;</span><span class="p">:</span> 
+            <span class="n">indx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">pair</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">dic</span>  <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="p">:</span><span class="n">indx</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">indx</span><span class="p">}</span> 
+            <span class="n">rrs</span>  <span class="o">=</span> <span class="n">rr</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">dic</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span> <span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">dic</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>  <span class="c1">#the more connection, the smaller the uncertainty</span>
+            
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+                    <span class="n">R</span><span class="p">[</span><span class="n">q</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">rrs</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">*</span><span class="p">(</span><span class="n">kdelta</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="n">q</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> \
+                                    <span class="o">-</span><span class="n">kdelta</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="n">q</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span> \
+                                    <span class="o">+</span><span class="n">rrs</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span><span class="o">*</span><span class="p">(</span><span class="n">kdelta</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="n">q</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> \
+                                    <span class="o">-</span><span class="n">kdelta</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="n">q</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                                        
+                    <span class="n">R</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">q</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="n">q</span><span class="p">,</span><span class="n">j</span><span class="p">]</span>  <span class="c1">#symmetry </span>
+            
+            
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span><span class="s1">&#39;do not understand format (fmt) of R&#39;</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">=</span> <span class="n">R</span></div>
+        
+<div class="viewcode-block" id="SynteticKF.get_interf_pairs"><a class="viewcode-back" href="../../../test.html#kf.utils.createinput.SynteticKF.get_interf_pairs">[docs]</a>    <span class="k">def</span> <span class="nf">get_interf_pairs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        OBSOLETE as use pairs (15/10/2018) ?</span>
+<span class="sd">        extract indices of phases substracted together to build interfero</span>
+<span class="sd">            * imoins : indice of phases substracted to iplus (M)</span>
+<span class="sd">            * iplus  : indices of phases added  (M)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">Connect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span><span class="o">==-</span><span class="mf">1.</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> \
+                            <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span><span class="o">==</span> <span class="mf">1.</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">imoins</span> <span class="o">=</span> <span class="n">Connect</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iplus</span>  <span class="o">=</span> <span class="n">Connect</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span></div>
+        
+    
+<div class="viewcode-block" id="SynteticKF.slice_data"><a class="viewcode-back" href="../../../test.html#kf.utils.createinput.SynteticKF.slice_data">[docs]</a>    <span class="k">def</span> <span class="nf">slice_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">N_new</span><span class="p">):</span> 
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Slice previously generated array (Optional) </span>
+<span class="sd">        (keeps same sequence of random numbers)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">[:</span><span class="n">N_new</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">[:</span><span class="n">N_new</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="p">[:</span><span class="n">N_new</span><span class="p">]</span> 
+        <span class="c1">#self.bperp = self.bperp[:N_new] </span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span></div></div>
+    
+<span class="c1">##########################################################################</span>
+<span class="k">def</span> <span class="nf">kdelta</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;kronecker delta function&#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">j</span> <span class="p">:</span> 
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="k">else</span> <span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../../index.html">
+    <img class="logo" src="../../../_static/Geo4DLogo.jpg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=ManonDls&repo=KFTS-InSAR&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../intro.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../flow.html">2. KFTS-InSAR Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../func.html">3. Functional model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kal.html">4. Kalman Filter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fmt.html">5. Setup and formating</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../test.html">6. Synthetic data</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, M. Dalaison & R. Jolivet.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

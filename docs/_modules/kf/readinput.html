@@ -1,0 +1,517 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>kf.readinput &#8212; KFTS-InSAR 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kf.readinput</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="c1">############################################################################@</span>
+<span class="c1"># Read files with interferograms, select study area, reshape for Kalamn filter</span>
+<span class="c1">#</span>
+<span class="c1">#Date : July 2018</span>
+<span class="c1">#Author : Manon Dalaison </span>
+<span class="c1">###########################################################################@</span>
+
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="kn">import</span> <span class="nb">zip</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="kn">import</span> <span class="nb">range</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="kn">import</span> <span class="nb">object</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">h5py</span><span class="o">,</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">datetime</span> <span class="k">as</span> <span class="nn">dt</span>
+
+<span class="c1">###########################################################################</span>
+<span class="c1"># WORK FROM DATA</span>
+<span class="k">class</span> <span class="nc">Subregion</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x1</span> <span class="o">=</span> <span class="n">x1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x2</span> <span class="o">=</span> <span class="n">x2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y1</span> <span class="o">=</span> <span class="n">y1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y2</span> <span class="o">=</span> <span class="n">y2</span>
+
+<div class="viewcode-block" id="SetupKF"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF">[docs]</a><span class="k">class</span> <span class="nc">SetupKF</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h5file</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;ISCE&#39;</span><span class="p">,</span> <span class="n">mpi</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mpiarg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">subregion</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Class for reading and modifying interferograms for Kalman filtering.</span>
+<span class="sd">            :h5file: .h5 file path containing</span>
+<span class="sd">                </span>
+<span class="sd">                - time  : decimal dates relative to first acquisition (usually in years)</span>
+<span class="sd">                - dates : absolute data</span>
+<span class="sd">                - igram : interferograms</span>
+<span class="sd">                - links : connection between phases to build interfero (M x N), 0 1 and -1</span>
+<span class="sd">                - bperp : perpendicular baseline between aquisitions</span>
+<span class="sd">        Opts:</span>
+<span class="sd">            :fmt:    format of H5file input, default is &#39;ISCE&#39;</span>
+<span class="sd">            :mpi:    do you use parallel features of mpi4py (True or False, default False)</span>
+<span class="sd">            :mpiarg: precise rank and size of communicator (tuple used if mpi=True)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        
+        <span class="c1">## Import and read Data</span>
+        <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="s1">&#39;ISCE&#39;</span><span class="p">:</span>
+            <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;figram&#39;</span>
+        <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span> <span class="s1">&#39;RAW&#39;</span><span class="p">:</span>
+            <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;igram&#39;</span>
+        <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span> <span class="s1">&#39;Etna&#39;</span><span class="p">:</span>
+            <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;igram_aps&#39;</span>
+        
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span><span class="s1">&#39;Format of H5file not known&#39;</span>
+        
+        <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="c1">#dictionary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">])[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">subregion</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">spatial_grid</span><span class="p">()</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">spatial_grid</span><span class="p">(</span><span class="n">xmin</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">x1</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">x2</span><span class="p">,</span> 
+                        <span class="n">ymin</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">y1</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">y2</span><span class="p">,</span> <span class="n">truncate</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">dividepxls</span><span class="p">(</span><span class="n">mpi</span><span class="p">,</span><span class="n">mpiarg</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">time</span>        <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;tims&#39;</span><span class="p">][:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;Jmat&#39;</span><span class="p">][:]</span>                              <span class="c1">#2D (interf,time)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;bperp&#39;</span><span class="p">][:]</span>                             <span class="c1">#perpendicular baseline (interf)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orddates</span>    <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;dates&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">subregion</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>   <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">][:,</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span><span class="p">,:]</span>     <span class="c1">#3D (interf,y,x)</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>   <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">][:,</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span><span class="p">,</span><span class="n">subregion</span><span class="o">.</span><span class="n">x1</span><span class="p">:</span><span class="n">subregion</span><span class="o">.</span><span class="n">x2</span><span class="p">]</span>
+        
+        <span class="c1">#Ordinal date to decimal year</span>
+        <span class="n">init</span>      <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromordinal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orddates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">yr_start</span>  <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">init</span><span class="o">.</span><span class="n">year</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">toordinal</span><span class="p">()</span>
+        <span class="n">yr_len</span>    <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">init</span><span class="o">.</span><span class="n">year</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">toordinal</span><span class="p">()</span> <span class="o">-</span> <span class="n">yr_start</span>
+        <span class="n">day_inyr</span>  <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">init</span><span class="o">.</span><span class="n">year</span><span class="p">,</span><span class="n">init</span><span class="o">.</span><span class="n">month</span><span class="p">,</span><span class="n">init</span><span class="o">.</span><span class="n">day</span><span class="p">)</span><span class="o">.</span><span class="n">toordinal</span><span class="p">()</span> <span class="o">-</span> <span class="n">yr_start</span>
+        <span class="n">t0</span>        <span class="o">=</span> <span class="n">init</span><span class="o">.</span><span class="n">year</span> <span class="o">+</span> <span class="n">day_inyr</span><span class="o">/</span><span class="n">yr_len</span> 
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span>  <span class="n">t0</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">[:]</span>
+
+
+<div class="viewcode-block" id="SetupKF.dividepxls"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.dividepxls">[docs]</a>    <span class="k">def</span> <span class="nf">dividepxls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mpi</span><span class="p">,</span> <span class="n">mpiarg</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Check if MPI used and divide pxls into subsets for different workers</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># store total amount of lines</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span>
+        
+        <span class="k">if</span> <span class="n">mpi</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mpi</span> <span class="o">=</span> <span class="n">mpi</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">mpiarg</span>
+            
+            <span class="c1">#select number of line per worker</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span> <span class="o">&gt;</span> <span class="n">size</span> <span class="p">:</span>
+                <span class="n">Yslice</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="o">/</span><span class="n">size</span><span class="p">)</span>
+            <span class="k">else</span> <span class="p">:</span>
+                <span class="n">Yslice</span> <span class="o">=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;There are </span><span class="si">{}</span><span class="s1"> columns, each worker will deal with </span><span class="si">{}</span><span class="s1"> columns&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                                      <span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span><span class="p">,</span><span class="n">Yslice</span><span class="p">))</span>
+            <span class="c1">#select subset along latitudes (y)</span>
+            <span class="n">miny</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">*</span> <span class="n">Yslice</span>
+            <span class="k">assert</span> <span class="p">(</span><span class="n">miny</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span><span class="p">),</span><span class="s2">&quot;Worker </span><span class="si">{}</span><span class="s2"> has no columns to work with, STOP&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">size</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">maxy</span> <span class="o">=</span> <span class="n">miny</span> <span class="o">+</span> <span class="n">Yslice</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">maxy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span> <span class="o">=</span> <span class="n">maxy</span> <span class="o">-</span><span class="n">miny</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span> <span class="o">=</span> <span class="n">miny</span><span class="p">,</span><span class="n">maxy</span>
+            
+            <span class="c1">#if self.verbose:</span>
+            <span class="c1">#    print(&#39;Worker {} working on {} to {}&#39;.format(self.rank, miny, maxy))</span>
+            
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mpi</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span></div>
+                
+            
+<div class="viewcode-block" id="SetupKF.trunc_time"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.trunc_time">[docs]</a>    <span class="k">def</span> <span class="nf">trunc_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t_num</span><span class="p">)</span> <span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        Select subset of dates.</span>
+<span class="sd">            :t_num: the number of dates to keep at the end of array</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Truncate time :keep last&#39;</span><span class="p">,</span> <span class="n">t_num</span><span class="p">,</span> <span class="s1">&#39;aquisitions&#39;</span><span class="p">)</span> 
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">time</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="o">-</span><span class="n">t_num</span><span class="p">:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[:,</span><span class="o">-</span><span class="n">t_num</span><span class="p">:]</span>
+
+        <span class="c1">#remove lines not containing both 1 and -1</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="o">==</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="o">==-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">mask</span><span class="p">,:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">igram</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="p">[</span><span class="n">mask</span><span class="p">,:,:]</span></div>
+    
+<div class="viewcode-block" id="SetupKF.spatial_grid"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.spatial_grid">[docs]</a>    <span class="k">def</span> <span class="nf">spatial_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">truncate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create spatial grid with possibility of choosing a spatial subset.</span>
+<span class="sd">        </span>
+<span class="sd">        Opts:</span>
+<span class="sd">            :xmin,xmax,ymin,ymax: indexes delimiting the study area (integers)</span>
+<span class="sd">                            default are all pixels (0,Nx,0,Ny)   </span>
+<span class="sd">            :truncate: True or False (for quick testing)</span>
+
+<span class="sd">        Return: </span>
+<span class="sd">            * meshgrid in x and y (2 2D arrays)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="p">(</span><span class="n">xmax</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">ymax</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span> <span class="p">:</span>
+            <span class="n">xmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nx</span>
+            <span class="n">ymax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span>
+        
+        <span class="n">nx</span><span class="p">,</span><span class="n">ny</span>           <span class="o">=</span> <span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">,</span> <span class="n">ymax</span><span class="o">-</span><span class="n">ymin</span>
+        <span class="n">y</span><span class="p">,</span><span class="n">x</span>             <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">ny</span><span class="p">))),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">nx</span><span class="p">)))</span>    
+        <span class="bp">self</span><span class="o">.</span><span class="n">yv</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">xv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span> <span class="n">ymin</span><span class="o">+</span><span class="n">y</span><span class="p">,</span> <span class="n">xmin</span><span class="o">+</span><span class="n">x</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="p">(</span><span class="n">truncate</span> <span class="ow">and</span> <span class="p">(</span><span class="n">nx</span><span class="o">*</span><span class="n">ny</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nx</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">yv</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">xv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Nx</span> <span class="o">=</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span> <span class="o">=</span> <span class="n">ny</span>
+
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span></div>
+        
+<div class="viewcode-block" id="SetupKF.pxl_with_nodata"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.pxl_with_nodata">[docs]</a>    <span class="k">def</span> <span class="nf">pxl_with_nodata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">thres</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Check for pixels with little and build mask.</span>
+<span class="sd">            :xv,yv: grid element </span>
+<span class="sd">        Opts:</span>
+<span class="sd">            :thres:  minimum number of interferogram required to be available for one pixel</span>
+<span class="sd">            :chunks: chunks of columns to be processed simultaneously</span>
+<span class="sd">        Return:</span>
+<span class="sd">            * pairs of indices in list </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="c1"># Make mask</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-- Masking elements with little data --&#39;</span><span class="p">)</span>
+        
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="c1">#(interf,y,x)</span>
+        
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nx</span><span class="p">,</span> <span class="n">chunks</span><span class="p">):</span>    <span class="c1">#itterate through blocks of </span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">j</span><span class="o">+</span><span class="n">chunks</span><span class="p">])</span>
+            <span class="n">mask</span><span class="p">[:,</span><span class="n">j</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="p">[:,:,</span><span class="n">j</span><span class="p">:</span><span class="n">end</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1">#sum counts number of True</span>
+        
+        <span class="k">if</span> <span class="n">plot</span><span class="o">==</span><span class="kc">True</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+            <span class="n">fig</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span><span class="n">vmin</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;numb_data_map.png&#39;</span><span class="p">,</span><span class="n">dpi</span><span class="o">=</span><span class="mi">250</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            
+        <span class="n">mask</span><span class="p">[</span><span class="n">mask</span><span class="o">&lt;</span><span class="n">thres</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">mask</span><span class="p">[</span><span class="n">mask</span><span class="o">&gt;=</span><span class="n">thres</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="s1">&#39;mask&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">*=</span> <span class="n">mask</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Selected pixels :&#39;</span><span class="p">,</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mask</span><span class="p">)),</span><span class="s1">&#39;so&#39;</span><span class="p">,</span>\
+                        <span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Nx</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">))</span><span class="o">*</span><span class="mf">100.</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s1">&#39;%&#39;</span><span class="p">,</span>
+                        <span class="s2">&quot;-for worker&quot;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+                                
+        <span class="k">return</span> </div>
+    
+<div class="viewcode-block" id="SetupKF.select_pxl_band"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.select_pxl_band">[docs]</a>    <span class="k">def</span> <span class="nf">select_pxl_band</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">slope</span><span class="p">,</span><span class="n">Xoff1</span><span class="p">,</span><span class="n">Xoff2</span><span class="p">,</span><span class="n">xmin</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Chose subset around fault between two parallel lines (X = slope*Y + off).</span>
+<span class="sd">            :slope: slope of bounds for X as a function of Y (float)</span>
+<span class="sd">            :Xoff1: offset in minimum line (float)</span>
+<span class="sd">            :Xoff2: offset in maximum line (Xoff2 &gt; Xoff1)</span>
+<span class="sd">        Opt:</span>
+<span class="sd">            :xmin: if nonzero in spatial_grid function need to specify its value </span>
+<span class="sd">        </span>
+<span class="sd">        NOT ADAPTED FOR MPI USE YET</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-- Selecting fault zone --&#39;</span><span class="p">)</span>
+        
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        
+        <span class="k">for</span> <span class="n">jj</span> <span class="ow">in</span> <span class="n">y</span><span class="p">:</span> <span class="c1">#itterate over rows</span>
+            <span class="n">Xmin</span> <span class="o">=</span> <span class="n">slope</span><span class="o">*</span><span class="n">jj</span> <span class="o">+</span><span class="n">Xoff1</span>
+            <span class="n">Xmax</span> <span class="o">=</span> <span class="n">slope</span><span class="o">*</span><span class="n">jj</span> <span class="o">+</span><span class="n">Xoff2</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">jj</span><span class="p">,</span><span class="n">x</span><span class="o">+</span><span class="n">xmin</span> <span class="o">&gt;</span> <span class="n">Xmin</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">jj</span><span class="p">,</span><span class="n">x</span><span class="o">+</span><span class="n">xmin</span> <span class="o">&gt;</span> <span class="n">Xmax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="c1"># update mask</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;mask&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">*=</span> <span class="n">mask</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span><span class="s1">&#39;Selected pixels :&#39;</span><span class="p">,</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mask</span><span class="p">)),</span><span class="s1">&#39;so&#39;</span><span class="p">,</span>\
+                            <span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Nx</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">))</span><span class="o">*</span><span class="mf">100.</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span><span class="s1">&#39;%&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> </div>
+        
+<div class="viewcode-block" id="SetupKF.get_interf_pairs"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.get_interf_pairs">[docs]</a>    <span class="k">def</span> <span class="nf">get_interf_pairs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        Extract indices of phases substracted together to build interfero.</span>
+<span class="sd">            * imoins : indice of phases substracted to iplus (M)</span>
+<span class="sd">            * iplus  : indices of phases added  (M) </span>
+<span class="sd">        &#39;&#39;&#39;</span>  
+        <span class="n">Connect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span><span class="o">==-</span><span class="mf">1.</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> \
+                            <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span><span class="o">==</span> <span class="mf">1.</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">imoins</span> <span class="o">=</span> <span class="n">Connect</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iplus</span>  <span class="o">=</span> <span class="n">Connect</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_tsep</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(((</span><span class="bp">self</span><span class="o">.</span><span class="n">imoins</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">iplus</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mf">2.</span><span class="p">)))</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;max step separation btwn interfero&#39;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">max_tsep</span><span class="p">)</span>
+        
+        <span class="k">return</span> </div>
+
+<div class="viewcode-block" id="SetupKF.create_R"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.create_R">[docs]</a>    <span class="k">def</span> <span class="nf">create_R</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rr</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">        Create covariance matrix of data </span>
+<span class="sd">            :rr: variance in observation (=interferograms) noise (float)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="n">imoins</span><span class="p">,</span><span class="n">iplus</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">imoins</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">iplus</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">imoins</span><span class="p">))</span><span class="o">*</span> <span class="n">rr</span>      
+        <span class="c1">#for q in range(0,len(imoins)):</span>
+        <span class="c1">#    R[q,-1] = 1/2.*rr*(kdelta(imoins[q],imoins[-1])  </span>
+        <span class="c1">#                        +kdelta(iplus[q],iplus[-1])</span>
+        <span class="c1">#                        -kdelta(imoins[q],iplus[-1])</span>
+        <span class="c1">#                        -kdelta(iplus[q],imoins[-1]))</span>
+        <span class="c1">#    R[-1,q] = R[q,-1]           </span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">=</span> <span class="n">R</span>
+
+        <span class="k">return</span>  </div>
+
+<div class="viewcode-block" id="SetupKF.summary"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.summary">[docs]</a>    <span class="k">def</span> <span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; Print data properties&#39;&#39;&#39;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;timespan of measurements : &#39;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="s1">&#39;years&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;number of days with acquisitions : &#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;number of interferograms : &#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bperp</span><span class="p">))</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;total number of pixels : &#39;</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="p">)[</span><span class="mi">1</span><span class="p">:],</span><span class="s1">&#39; -for worker&#39;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+        
+        <span class="c1">#set first phase to zero</span>
+        <span class="c1">#self.links[:,0] = 0  #can&#39;t write on h5py  </span>
+                                 
+        <span class="k">return</span> </div></div>
+    
+    
+<span class="c1">##########################################################################</span>
+<span class="k">def</span> <span class="nf">kdelta</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;kronecker delta function&#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">j</span> <span class="p">:</span> 
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="k">else</span> <span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+        
+
+<div class="viewcode-block" id="initiatefileforKF"><a class="viewcode-back" href="../../fmt.html#kf.readinput.initiatefileforKF">[docs]</a><span class="k">def</span> <span class="nf">initiatefileforKF</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="n">phasefile</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> 
+                           <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">toverlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Open h5py file for kalman filter.</span>
+<span class="sd">        :statefile: file name and location </span>
+<span class="sd">        :phasefile: file name and location </span>
+<span class="sd">        :L:         number of parameters </span>
+<span class="sd">        :model:     model description in tuple used for timefunction.py</span>
+<span class="sd">        :store:     is a tuple of things to store</span>
+<span class="sd">        :comm:      communicator if MPI used (e.g. MPI.COMM_WORLD)</span>
+<span class="sd">        :toverlap:  number of overlaping timesteps with past solution (only if restart KF)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+        
+    <span class="n">lent</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span><span class="n">toverlap</span>
+    <span class="n">Ny</span><span class="p">,</span> <span class="n">Nx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">Ntot</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">Nx</span>
+    <span class="n">m_err</span><span class="p">,</span> <span class="n">sig_eps</span><span class="p">,</span> <span class="n">sig_gam</span>  <span class="o">=</span> <span class="n">store</span>
+    
+    <span class="k">if</span> <span class="n">comm</span><span class="o">==</span><span class="kc">False</span> <span class="p">:</span>
+        <span class="n">fstates</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">fphases</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">phasefile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">else</span> <span class="p">:</span> 
+        <span class="n">fstates</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+        <span class="n">fphases</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">phasefile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">t_sep</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">tsep</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">max_tsep</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tsep</span> <span class="o">=</span> <span class="n">t_sep</span>
+        
+    <span class="c1">## Create output dataset (name,shape,datatype)</span>
+    <span class="c1"># Elements to restart the kalman filter</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">fstates</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;state&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">L</span><span class="o">+</span><span class="n">tsep</span><span class="p">),</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;State m comprising the model parameters and the last retrieved phases </span><span class="se">\n</span><span class="s1"> for model &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+
+    <span class="n">state_cov</span> <span class="o">=</span> <span class="n">fstates</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;state_cov&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">L</span><span class="o">+</span><span class="n">tsep</span><span class="p">,</span><span class="n">L</span><span class="o">+</span><span class="n">tsep</span><span class="p">),</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+    <span class="n">state_cov</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Covariance P of state m&#39;</span>
+    
+    <span class="n">indx</span> <span class="o">=</span> <span class="n">fstates</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;indx&#39;</span><span class="p">,(</span><span class="n">tsep</span><span class="p">,),</span><span class="s1">&#39;i8&#39;</span><span class="p">)</span>
+    <span class="n">indx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Indexes of the phases still within the state m (in parms)&#39;</span>
+
+    <span class="n">subtime</span> <span class="o">=</span> <span class="n">fstates</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;tims&#39;</span><span class="p">,(</span><span class="n">tsep</span><span class="p">,),</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+    <span class="n">subtime</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;times corresponding to phases in state in decimal years with respect to first phase with ti= &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">date</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">pn</span> <span class="o">=</span> <span class="n">fstates</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;processnoise&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">m_err</span><span class="p">)</span>
+    <span class="n">pn</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Process noise for functional model parameters&#39;</span>
+
+    <span class="n">mm</span> <span class="o">=</span> <span class="n">fstates</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;mismodeling&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">sig_gam</span><span class="p">)</span>
+    <span class="n">mm</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Mismodeling error added as process noise on last phase estimate&#39;</span>
+
+    <span class="n">mc</span> <span class="o">=</span> <span class="n">fstates</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;misclosure&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">sig_eps</span><span class="p">)</span>
+    <span class="n">mc</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Misclosure error included in data covariance&#39;</span>
+
+    <span class="c1"># Save time series of deformation </span>
+    <span class="n">rawts</span> <span class="o">=</span> <span class="n">fphases</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;rawts&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">lent</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    <span class="n">rawts</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Reconstructed phases&#39;</span>
+
+    <span class="n">rastd</span> <span class="o">=</span> <span class="n">fphases</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;rawts_std&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">lent</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    <span class="n">rastd</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Reconstructed phases standard deviation (sqrt of diag(P))&#39;</span>
+    
+    <span class="n">tims</span> <span class="o">=</span> <span class="n">fphases</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;tims&#39;</span><span class="p">,(</span><span class="n">lent</span><span class="p">,),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    <span class="n">tims</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Decimal years of the time series with ti= &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">date</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    
+    <span class="n">dates</span> <span class="o">=</span> <span class="n">fphases</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;dates&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">orddates</span><span class="p">)</span>
+    <span class="n">dates</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Ordinal values of the SAR acquisition dates&#39;</span>
+
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">fphases</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;idx0&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">idx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Index of first phase in file with respect to first reference date of time series&#39;</span>
+    
+    <span class="k">return</span> <span class="n">fstates</span><span class="p">,</span><span class="n">fphases</span></div>
+
+
+<div class="viewcode-block" id="reopenfileforKF"><a class="viewcode-back" href="../../fmt.html#kf.readinput.reopenfileforKF">[docs]</a><span class="k">def</span> <span class="nf">reopenfileforKF</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="n">phasefile</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Function to reopen file after closure to test readability&#39;&#39;&#39;</span>
+    
+    <span class="k">if</span> <span class="n">comm</span><span class="o">==</span><span class="kc">False</span> <span class="p">:</span>
+        <span class="n">fstates</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">)</span>
+        <span class="n">fphases</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">phasefile</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">)</span>
+    <span class="k">else</span> <span class="p">:</span>
+        <span class="n">fstates</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+        <span class="n">fphases</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">phasefile</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">fstates</span><span class="p">,</span><span class="n">fphases</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../index.html">
+    <img class="logo" src="../../_static/Geo4DLogo.jpg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=ManonDls&repo=KFTS-InSAR&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../flow.html">2. KFTS-InSAR Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../func.html">3. Functional model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kal.html">4. Kalman Filter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fmt.html">5. Setup and formating</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../test.html">6. Synthetic data</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, M. Dalaison & R. Jolivet.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

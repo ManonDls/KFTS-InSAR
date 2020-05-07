@@ -1,0 +1,469 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>kfts &#8212; KFTS-InSAR 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kfts</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+
+<span class="c1"># Global stuff</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">os</span> 
+<span class="kn">import</span> <span class="nn">sys</span>  
+<span class="kn">import</span> <span class="nn">h5py</span>
+<span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">TIME</span> 
+
+<span class="c1"># Local stuff</span>
+<span class="kn">import</span> <span class="nn">kf</span>
+<span class="kn">from</span> <span class="nn">kf.KF_class</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">kf.readinput</span> <span class="k">as</span> <span class="nn">infmt</span>
+<span class="kn">from</span> <span class="nn">kf.timefunction</span> <span class="kn">import</span> <span class="n">TimeFct</span>
+
+<span class="c1"># To Parametrize</span>
+<span class="kn">import</span> <span class="nn">configparser</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">from</span> <span class="nn">ast</span> <span class="kn">import</span> <span class="n">literal_eval</span>
+
+<span class="c1"># MPI </span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+
+<div class="viewcode-block" id="RunKalmanFilter"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter">[docs]</a><span class="k">class</span> <span class="nc">RunKalmanFilter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class to run the full KFTS-InSAR processing chain</span>
+<span class="sd">    Read configuration and data. Setup parameters. Run KF for each pixel.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>           <span class="c1"># close all figures</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>   <span class="c1"># record running time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initMpi</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setConfiguration</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">initMpi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; Initiate communication of the Message Passing Interface (MPI)&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
+        
+
+    <span class="k">def</span> <span class="nf">setConfiguration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Read configuration file and convert to python objects.</span>
+<span class="sd">            :config: open config file (.ini format)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="n">loc</span>     <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;INPUT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;workdir&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infile</span>  <span class="o">=</span> <span class="n">loc</span> <span class="o">+</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;INPUT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;infile&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fmtfile</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;INPUT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;fmtfile&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;ISCE&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instate</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;INPUT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;instate&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eqinfo</span>  <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;INPUT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;eqinfo&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">instate</span> <span class="o">=</span> <span class="n">loc</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">instate</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">eqinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eqinfo</span> <span class="o">=</span> <span class="n">loc</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">eqinfo</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">outdir</span> <span class="o">=</span> <span class="n">loc</span> <span class="o">+</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;OUTPUT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outdir&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">figdir</span> <span class="o">=</span> <span class="n">loc</span> <span class="o">+</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;OUTPUT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;figdir&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">secMS</span>      <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;MODEL SETUP&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EQ</span>    <span class="o">=</span> <span class="n">secMS</span><span class="o">.</span><span class="n">getboolean</span><span class="p">(</span><span class="s1">&#39;EQ&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">freq</span>       <span class="o">=</span> <span class="n">secMS</span><span class="o">.</span><span class="n">getfloat</span><span class="p">(</span><span class="s1">&#39;freq&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_y</span> <span class="o">=</span> <span class="n">secMS</span><span class="o">.</span><span class="n">getfloat</span><span class="p">(</span><span class="s1">&#39;sig_y&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_i</span> <span class="o">=</span> <span class="n">secMS</span><span class="o">.</span><span class="n">getfloat</span><span class="p">(</span><span class="s1">&#39;sig_i&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">)</span>
+        
+        <span class="k">try</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secMS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="p">:</span> 
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: model unreadable in config section [MODEL SETUP], use default&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;POLY&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="s1">&#39;SIN&#39;</span><span class="p">,</span><span class="n">freq</span><span class="p">),(</span><span class="s1">&#39;COS&#39;</span><span class="p">,</span><span class="n">freq</span><span class="p">)]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secMS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sig_a&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span><span class="p">)</span>
+
+        <span class="n">secKFS</span>       <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;KALMAN FILTER SETUP&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span> <span class="o">=</span> <span class="n">secKFS</span><span class="o">.</span><span class="n">getboolean</span><span class="p">(</span><span class="s1">&#39;VERBOSE&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PLOT</span>    <span class="o">=</span> <span class="n">secKFS</span><span class="o">.</span><span class="n">getboolean</span><span class="p">(</span><span class="s1">&#39;PLOT&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">UPDT</span>    <span class="o">=</span> <span class="n">secKFS</span><span class="o">.</span><span class="n">getboolean</span><span class="p">(</span><span class="s1">&#39;UPDT&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pxlTh</span>   <span class="o">=</span> <span class="n">secKFS</span><span class="o">.</span><span class="n">getint</span><span class="p">(</span><span class="s1">&#39;pxlTh&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Functional model string is: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exclude pixels is less than </span><span class="si">{}</span><span class="s2"> interferograms&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pxlTh</span><span class="p">))</span> 
+
+        <span class="c1">## Optional section</span>
+        <span class="c1"># initialize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subregion</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="c1"># read if exists</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">has_section</span><span class="p">(</span><span class="s1">&#39;FOR TESTING&#39;</span><span class="p">):</span>
+            <span class="n">secFT</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;FOR TESTING&#39;</span><span class="p">]</span>
+            <span class="n">SUBREGION</span> <span class="o">=</span> <span class="n">secFT</span><span class="o">.</span><span class="n">getboolean</span><span class="p">(</span><span class="s1">&#39;SUBREGION&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">SUBREGION</span><span class="p">:</span>
+                <span class="n">x1</span><span class="p">,</span><span class="n">x2</span><span class="p">,</span><span class="n">y1</span><span class="p">,</span><span class="n">y2</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secFT</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;limval&#39;</span><span class="p">,</span><span class="n">fallback</span> <span class="o">=</span> <span class="s1">&#39;0,0,0,0&#39;</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">subregion</span> <span class="o">=</span> <span class="n">infmt</span><span class="o">.</span><span class="n">Subregion</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: select subregion&quot;</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">readData</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Initiate the data class dealing with interferograms, time,</span>
+<span class="sd">        spatial grid and mask. It</span>
+<span class="sd">            #. reads data</span>
+<span class="sd">            #. divide the grid between workers (if MPI)</span>
+<span class="sd">            #. build data covariance and</span>
+<span class="sd">            #. store information</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="c1"># Read data file</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">infmt</span><span class="o">.</span><span class="n">SetupKF</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">infile</span><span class="p">,</span> 
+            <span class="n">mpi</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> 
+            <span class="n">mpiarg</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> 
+            <span class="n">fmt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fmtfile</span><span class="p">,</span> 
+            <span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span><span class="p">,</span>
+            <span class="n">subregion</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subregion</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Chose subset around fault </span>
+        <span class="c1">#data.select_pxl_band(x,y,0.48,-750,-650) </span>
+        
+        <span class="c1"># Record indexes of empty pixels</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">pxl_with_nodata</span><span class="p">(</span><span class="n">thres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pxlTh</span><span class="p">,</span> <span class="n">plot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">PLOT</span><span class="p">)</span>
+        
+        <span class="c1"># Get indices pairs used to build interferograms</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">get_interf_pairs</span><span class="p">()</span>
+        
+        <span class="c1"># Build matrix of uncertainty on data</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">create_R</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_i</span><span class="p">))</span>  
+        
+        <span class="c1"># Print properties of data and keep it stored in there</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="k">def</span> <span class="nf">earthquakeIntegration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; Add step function to the functional model of deformation</span>
+<span class="sd">        to model coseismic displacement due to earthquakes.</span>
+<span class="sd">        Require a file containing earthquake properties in the track</span>
+<span class="sd">        reference frame (see earthquake2step.py).</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">def</span> <span class="nf">twoD_Gauss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">amp0</span><span class="p">,</span> <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">),</span> <span class="n">sig</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">):</span>
+            <span class="sd">&#39;&#39;&#39;Compute a gaussian at coord x,y&#39;&#39;&#39;</span>
+            <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span> <span class="o">=</span> <span class="n">center</span>
+            <span class="n">Function</span> <span class="o">=</span> <span class="n">amp0</span> <span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x0</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">y0</span><span class="o">-</span><span class="n">y</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">sig</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">Function</span>
+
+        <span class="c1"># Get earthquake properties in actual reference frame</span>
+        <span class="n">Xeq</span><span class="p">,</span><span class="n">Yeq</span><span class="p">,</span><span class="n">teq</span><span class="p">,</span><span class="n">Rinf</span><span class="p">,</span><span class="n">sx</span><span class="p">,</span><span class="n">sy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eqinfo</span><span class="p">,</span> <span class="n">unpack</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">Xeq</span> <span class="o">=</span> <span class="n">Xeq</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+        <span class="n">Yeq</span> <span class="o">=</span> <span class="n">Yeq</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">teq</span><span class="p">,</span><span class="nb">float</span><span class="p">):</span>
+            <span class="c1">#specific case of one earthquake only</span>
+            <span class="n">Leq</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">teq</span> <span class="o">=</span> <span class="p">[</span><span class="n">teq</span><span class="p">]</span>
+            <span class="n">Xeq</span><span class="p">,</span><span class="n">Yeq</span> <span class="o">=</span> <span class="p">[</span><span class="n">Xeq</span><span class="p">],[</span><span class="n">Yeq</span><span class="p">]</span>
+            <span class="n">Rinf</span><span class="p">,</span><span class="n">sx</span><span class="p">,</span><span class="n">sy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Rinf</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sx</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sy</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">teq</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">):</span>
+            <span class="n">teq</span> <span class="o">=</span> <span class="n">teq</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">Leq</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">teq</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Verify content of </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">eqinfo</span><span class="p">)</span>
+        
+        <span class="n">teq</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;STEP&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">),</span><span class="nb">tuple</span><span class="p">(</span><span class="n">teq</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;New functional model with earthquakes :&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">Leq</span><span class="p">))</span>
+
+        <span class="c1"># Error per earthquake</span>
+        <span class="n">P0eq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">data</span><span class="o">.</span><span class="n">Ny</span><span class="p">,</span><span class="n">data</span><span class="o">.</span><span class="n">Nx</span><span class="p">,</span><span class="n">Leq</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Leq</span><span class="p">):</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">Rinf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">sx</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">sy</span><span class="p">)]))</span>
+            <span class="n">fct</span> <span class="o">=</span> <span class="n">twoD_Gauss</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">xv</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">yv</span><span class="p">,</span> <span class="mi">30</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="n">Xeq</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">Yeq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="n">data</span><span class="o">.</span><span class="n">miny</span><span class="p">),</span> <span class="n">sig</span> <span class="o">=</span> <span class="n">width</span><span class="p">)</span>
+            <span class="n">fct</span><span class="p">[</span><span class="n">fct</span> <span class="o">&lt;</span> <span class="mf">1.</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="n">P0eq</span><span class="p">[:,:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">fct</span>
+
+    <span class="k">def</span> <span class="nf">initCovariances</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">L</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Create arrays for the initial state Covariance matrix (P0)</span>
+<span class="sd">        and the process noise covariance (Q).</span>
+<span class="sd">            :L: Initial length of the state vector</span>
+<span class="sd">                (number of model parameter + 1 (for reference phase))</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="n">P_par</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span><span class="p">)</span>
+        <span class="n">m_err</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>           <span class="c1"># Incertitude sur parametres</span>
+        <span class="n">phi_err</span> <span class="o">=</span> <span class="mf">0.0</span>                   <span class="c1"># Incertitude sur interfero</span>
+        <span class="n">add_err</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_y</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>       <span class="c1"># Uncertainty on newly added phase</span>
+        <span class="k">return</span> <span class="n">P_par</span><span class="p">,</span> <span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span>
+
+    <span class="k">def</span> <span class="nf">initPlot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">figdir</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Draw quick plots to visualize input data:</span>
+<span class="sd">            * Data plot</span>
+<span class="sd">            * baseline plot</span>
+<span class="sd">            * spatial mask on pixel</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+            
+        <span class="kn">import</span> <span class="nn">kf.makeplot</span> <span class="k">as</span> <span class="nn">mplt</span>
+        <span class="n">mplt</span><span class="o">.</span><span class="n">view_data</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">igram</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">igram</span><span class="p">)[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">figdir</span><span class="p">)</span>
+        <span class="n">mplt</span><span class="o">.</span><span class="n">view_mask</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span> <span class="n">figdir</span><span class="p">)</span>
+        <span class="n">mplt</span><span class="o">.</span><span class="n">plot_baselines</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">bperp</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">imoins</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">iplus</span><span class="p">,</span> <span class="n">figdir</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">isTraceOn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Print only if verbose activated and first parallel worker&#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> 
+
+    <span class="k">def</span> <span class="nf">launch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Combine procedures to prepare data and model, then</span>
+<span class="sd">        launch the Kalman filter class on each pixel row by row</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="c1">## Setup</span>
+        <span class="c1"># Start class dealing with data</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readData</span><span class="p">()</span>
+        
+        <span class="c1"># Add earthquake to model</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">EQ</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">earthquakeIntegration</span><span class="p">()</span>
+        
+        <span class="c1"># Start class dealing with the functional model</span>
+        <span class="n">tfct</span> <span class="o">=</span> <span class="n">TimeFct</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="n">tfct</span><span class="o">.</span><span class="n">check_model</span><span class="p">(</span><span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span><span class="p">)</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span><span class="p">)</span>
+        
+        <span class="c1"># Check right number of model a priori error</span>
+        <span class="k">if</span> <span class="n">tfct</span><span class="o">.</span><span class="n">L</span> <span class="o">==</span> <span class="n">L</span><span class="p">:</span>
+            <span class="c1"># Add zero to apriori uncertainty as first phase is certain</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">tfct</span><span class="o">.</span><span class="n">L</span> <span class="o">==</span> <span class="p">(</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> 	
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> 
+                <span class="n">L</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="k">else</span> <span class="p">:</span> 
+                <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;sig_a has an unexpected extra value, reduce length by one&quot;</span>
+        <span class="k">elif</span> <span class="n">tfct</span><span class="o">.</span><span class="n">L</span><span class="o">&lt;</span><span class="p">(</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Too many uncertainties specified (</span><span class="si">%d</span><span class="s2">) in sig_a compare to model requirement (</span><span class="si">%d</span><span class="s2">)&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="n">tfct</span><span class="o">.</span><span class="n">L</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tfct</span><span class="o">.</span><span class="n">L</span><span class="o">&gt;</span><span class="n">L</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Too few uncertainties specified (</span><span class="si">%d</span><span class="s2">) in sig_a compare to model requirement (</span><span class="si">%d</span><span class="s2">)&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="n">tfct</span><span class="o">.</span><span class="n">L</span><span class="p">)</span>
+        
+        <span class="n">P_par</span><span class="p">,</span> <span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initCovariances</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">PLOT</span> <span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">initPlot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">figdir</span><span class="p">)</span>
+            
+        <span class="c1">#---------------------------------------------------------------------------</span>
+        <span class="c1">## Kalman Filter</span>
+        <span class="n">kf_start</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">m0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+        <span class="n">P0</span> <span class="o">=</span> <span class="n">P_par</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">L</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">toverl</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">UPDT</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># Import common things to all pixels to gain time </span>
+            <span class="n">finstate</span>  <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instate</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">statetime</span> <span class="o">=</span> <span class="n">finstate</span><span class="p">[</span><span class="s1">&#39;tims&#39;</span><span class="p">][:]</span>     <span class="c1">#contains as many dates than state contains phases</span>
+            <span class="n">indxs</span>     <span class="o">=</span> <span class="n">finstate</span><span class="p">[</span><span class="s1">&#39;indx&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            
+            <span class="c1"># Identify new dates with respect to former state</span>
+            <span class="n">newdate</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">time</span> <span class="k">if</span> <span class="n">t</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">statetime</span><span class="p">]</span>
+            
+            <span class="c1"># Check consistency </span>
+            <span class="k">assert</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">newdate</span><span class="p">)</span>  <span class="o">&gt;</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">&quot;No supplementary date in file </span><span class="si">{}</span><span class="s2"> wrt existing </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">infile</span><span class="p">,</span><span class="n">instate</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="p">(</span><span class="n">statetime</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="s2">&quot;New data involves timesteps older than what was retained in the former state&quot;</span>
+            
+            <span class="c1"># Set number of phases to keep for latter update</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">max_tsep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">data</span><span class="o">.</span><span class="n">max_tsep</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">statetime</span><span class="p">)])</span>
+            <span class="n">toverl</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">statetime</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">newdate</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">():</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Data contains </span><span class="si">{}</span><span class="s1"> new time steps&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">newdate</span><span class="p">)))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-- Open H5 file for storage --&#39;</span><span class="p">)</span>
+
+        <span class="n">fstates</span><span class="p">,</span> <span class="n">fphases</span> <span class="o">=</span> <span class="n">infmt</span><span class="o">.</span><span class="n">initiatefileforKF</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">outdir</span> <span class="o">+</span> <span class="s1">&#39;States.h5&#39;</span><span class="p">,</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">outdir</span> <span class="o">+</span> <span class="s1">&#39;Phases.h5&#39;</span><span class="p">,</span> 
+            <span class="n">L</span><span class="p">,</span> 
+            <span class="n">data</span><span class="p">,</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> 
+            <span class="p">(</span><span class="n">m_err</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_i</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_y</span><span class="p">),</span> 
+            <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">,</span> 
+            <span class="n">toverlap</span> <span class="o">=</span> <span class="n">toverl</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-- START Kalman Filter --&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Loop on each line</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">Ny</span><span class="p">):</span> 
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> / </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">,</span><span class="n">data</span><span class="o">.</span><span class="n">Ny</span><span class="p">))</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+            <span class="c1"># Create the kalman filters for all columns</span>
+            <span class="n">kalmans</span> <span class="o">=</span> <span class="p">[</span><span class="n">Kalman</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">tfct</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">j</span><span class="p">,</span> <span class="n">i</span> <span class="o">=</span> <span class="n">jj</span><span class="p">,</span> <span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span><span class="p">)</span> <span class="k">for</span> <span class="n">jj</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">Nx</span><span class="p">)</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">jj</span><span class="p">]</span><span class="o">&gt;</span><span class="mf">0.</span><span class="p">]</span>
+               
+            <span class="c1"># Create the filters for all columns of this line</span>
+            <span class="k">for</span> <span class="n">kal</span><span class="p">,</span><span class="n">jj</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">kalmans</span><span class="p">,</span><span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">Nx</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">EQ</span> <span class="o">==</span> <span class="kc">True</span> <span class="p">:</span>
+                    <span class="n">diagP0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">P0</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="n">diagP0</span><span class="p">[</span><span class="o">-</span><span class="p">(</span><span class="n">Leq</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">P0eq</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">jj</span><span class="p">,:]</span>
+                    <span class="n">P0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">diagP0</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">UPDT</span> <span class="o">==</span> <span class="kc">True</span> <span class="p">:</span> 
+                    <span class="n">kal</span><span class="o">.</span><span class="n">restart_from_file</span><span class="p">(</span><span class="n">finstate</span><span class="p">,</span> <span class="n">statetime</span><span class="p">,</span> <span class="n">indxs</span><span class="p">)</span>
+                <span class="k">else</span> <span class="p">:</span>
+                    <span class="n">kal</span><span class="o">.</span><span class="n">start_new</span><span class="p">(</span><span class="n">m0</span><span class="p">,</span> <span class="n">P0</span><span class="p">)</span>
+                    
+                <span class="n">kal</span><span class="o">.</span><span class="n">kf</span><span class="p">(</span><span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span><span class="p">,</span> <span class="n">plots</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">t_sep</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">max_tsep</span><span class="p">)</span>
+                    
+                <span class="c1"># Store outputs</span>
+                <span class="n">kal</span><span class="o">.</span><span class="n">write_output</span><span class="p">(</span><span class="n">fstates</span><span class="p">,</span> <span class="n">fphases</span><span class="p">,</span> <span class="n">Ny</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">Ntot</span><span class="p">,</span> <span class="n">Nx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">Nx</span><span class="p">)</span>
+
+        <span class="c1"># Close file</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-- Close H5 files in </span><span class="si">{}</span><span class="s1"> --&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outdir</span><span class="p">))</span>
+        <span class="n">fstates</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">fphases</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">UPDT</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">finstate</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Time for Kalman filter : </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">kf_start</span><span class="p">))</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    
+    <span class="c1">#First get file name from inline argument</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span> <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;InSAR Time series analysis with a Kalman Filter&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;-c&#39;</span><span class="p">,</span> 
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> 
+        <span class="n">dest</span> <span class="o">=</span> <span class="s1">&#39;config&#39;</span><span class="p">,</span> 
+        <span class="n">default</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span> <span class="o">=</span> <span class="s1">&#39;Specify INI config file containing at least sections INPUT,OUTPUT, MODEL SETUP, KALMAN FILTER SETUP&#39;</span>
+        <span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">while</span> <span class="p">(</span><span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Please choose a config file&#39;</span><span class="p">)</span>
+        <span class="n">exit</span><span class="p">()</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">(</span><span class="n">interpolation</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ExtendedInterpolation</span><span class="p">())</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">runner</span> <span class="o">=</span> <span class="n">RunKalmanFilter</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">runner</span><span class="o">.</span><span class="n">launch</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/Geo4DLogo.jpg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=ManonDls&repo=KFTS-InSAR&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../flow.html">2. KFTS-InSAR Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../func.html">3. Functional model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kal.html">4. Kalman Filter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fmt.html">5. Setup and formating</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../test.html">6. Synthetic data</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, M. Dalaison & R. Jolivet.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

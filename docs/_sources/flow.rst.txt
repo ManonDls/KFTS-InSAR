@@ -1,0 +1,8 @@
+
+Main workflow for KFTS-InSAR
+================================
+
+``kfts.py`` is the main file of KFTS-InSAR. It reads configuration (.ini) and run the full KFTS-InSAR processing chain. Separate components are detailed in subsequent sections. A typical command to run the algorithm is ``mpirun -n 30 python -u kfts.py -c myconfigfile.ini``
+
+.. automodule:: kfts
+.. autoclass:: RunKalmanFilter

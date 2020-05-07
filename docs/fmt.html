@@ -1,0 +1,328 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>5. Setup and formating for KF &#8212; KFTS-InSAR 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="6. Create synthetic data" href="test.html" />
+    <link rel="prev" title="4. Kalman Filter" href="kal.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="setup-and-formating-for-kf">
+<h1><span class="section-number">5. </span>Setup and formating for KF<a class="headerlink" href="#setup-and-formating-for-kf" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-kf.readinput">
+<span id="read-and-formate-data"></span><h2><span class="section-number">5.2. </span>Read and formate data<a class="headerlink" href="#module-kf.readinput" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="kf.readinput.SetupKF">
+<em class="property">class </em><code class="sig-prename descclassname">kf.readinput.</code><code class="sig-name descname">SetupKF</code><span class="sig-paren">(</span><em class="sig-param">h5file</em>, <em class="sig-param">fmt='ISCE'</em>, <em class="sig-param">mpi=False</em>, <em class="sig-param">mpiarg=0</em>, <em class="sig-param">verbose=True</em>, <em class="sig-param">subregion=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Class for reading and modifying interferograms for Kalman filtering.</dt><dd><dl class="field-list simple">
+<dt class="field-odd">h5file</dt>
+<dd class="field-odd"><p>.h5 file path containing</p>
+<ul class="simple">
+<li><p>time  : decimal dates relative to first acquisition (usually in years)</p></li>
+<li><p>dates : absolute data</p></li>
+<li><p>igram : interferograms</p></li>
+<li><p>links : connection between phases to build interfero (M x N), 0 1 and -1</p></li>
+<li><p>bperp : perpendicular baseline between aquisitions</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>Opts:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fmt</dt>
+<dd class="field-odd"><p>format of H5file input, default is ‘ISCE’</p>
+</dd>
+<dt class="field-even">mpi</dt>
+<dd class="field-even"><p>do you use parallel features of mpi4py (True or False, default False)</p>
+</dd>
+<dt class="field-odd">mpiarg</dt>
+<dd class="field-odd"><p>precise rank and size of communicator (tuple used if mpi=True)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="method">
+<dt id="kf.readinput.SetupKF.create_R">
+<code class="sig-name descname">create_R</code><span class="sig-paren">(</span><em class="sig-param">rr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.create_R"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.create_R" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Create covariance matrix of data </dt><dd><dl class="field-list simple">
+<dt class="field-odd">rr</dt>
+<dd class="field-odd"><p>variance in observation (=interferograms) noise (float)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.readinput.SetupKF.dividepxls">
+<code class="sig-name descname">dividepxls</code><span class="sig-paren">(</span><em class="sig-param">mpi</em>, <em class="sig-param">mpiarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.dividepxls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.dividepxls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if MPI used and divide pxls into subsets for different workers</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.readinput.SetupKF.get_interf_pairs">
+<code class="sig-name descname">get_interf_pairs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.get_interf_pairs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.get_interf_pairs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Extract indices of phases substracted together to build interfero.</dt><dd><ul class="simple">
+<li><p>imoins : indice of phases substracted to iplus (M)</p></li>
+<li><p>iplus  : indices of phases added  (M)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.readinput.SetupKF.pxl_with_nodata">
+<code class="sig-name descname">pxl_with_nodata</code><span class="sig-paren">(</span><em class="sig-param">thres=30</em>, <em class="sig-param">chunks=200</em>, <em class="sig-param">plot=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.pxl_with_nodata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.pxl_with_nodata" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Check for pixels with little and build mask.</dt><dd><dl class="field-list simple">
+<dt class="field-odd">xv,yv</dt>
+<dd class="field-odd"><p>grid element</p>
+</dd>
+</dl>
+</dd>
+<dt>Opts:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">thres</dt>
+<dd class="field-odd"><p>minimum number of interferogram required to be available for one pixel</p>
+</dd>
+<dt class="field-even">chunks</dt>
+<dd class="field-even"><p>chunks of columns to be processed simultaneously</p>
+</dd>
+</dl>
+</dd>
+<dt>Return:</dt><dd><ul class="simple">
+<li><p>pairs of indices in list</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.readinput.SetupKF.select_pxl_band">
+<code class="sig-name descname">select_pxl_band</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">slope</em>, <em class="sig-param">Xoff1</em>, <em class="sig-param">Xoff2</em>, <em class="sig-param">xmin=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.select_pxl_band"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.select_pxl_band" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Chose subset around fault between two parallel lines (X = slope*Y + off).</dt><dd><dl class="field-list simple">
+<dt class="field-odd">slope</dt>
+<dd class="field-odd"><p>slope of bounds for X as a function of Y (float)</p>
+</dd>
+<dt class="field-even">Xoff1</dt>
+<dd class="field-even"><p>offset in minimum line (float)</p>
+</dd>
+<dt class="field-odd">Xoff2</dt>
+<dd class="field-odd"><p>offset in maximum line (Xoff2 &gt; Xoff1)</p>
+</dd>
+</dl>
+</dd>
+<dt>Opt:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">xmin</dt>
+<dd class="field-odd"><p>if nonzero in spatial_grid function need to specify its value</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>NOT ADAPTED FOR MPI USE YET</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.readinput.SetupKF.spatial_grid">
+<code class="sig-name descname">spatial_grid</code><span class="sig-paren">(</span><em class="sig-param">xmin=0</em>, <em class="sig-param">xmax=0</em>, <em class="sig-param">ymin=0</em>, <em class="sig-param">ymax=0</em>, <em class="sig-param">truncate=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.spatial_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.spatial_grid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create spatial grid with possibility of choosing a spatial subset.</p>
+<dl class="simple">
+<dt>Opts:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">xmin,xmax,ymin,ymax</dt>
+<dd class="field-odd"><p>indexes delimiting the study area (integers)
+default are all pixels (0,Nx,0,Ny)</p>
+</dd>
+<dt class="field-even">truncate</dt>
+<dd class="field-even"><p>True or False (for quick testing)</p>
+</dd>
+</dl>
+</dd>
+<dt>Return: </dt><dd><ul class="simple">
+<li><p>meshgrid in x and y (2 2D arrays)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.readinput.SetupKF.summary">
+<code class="sig-name descname">summary</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.summary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print data properties</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.readinput.SetupKF.trunc_time">
+<code class="sig-name descname">trunc_time</code><span class="sig-paren">(</span><em class="sig-param">t_num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.trunc_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.trunc_time" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Select subset of dates.</dt><dd><dl class="field-list simple">
+<dt class="field-odd">t_num</dt>
+<dd class="field-odd"><p>the number of dates to keep at the end of array</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-kf.readinput">
+<span id="create-or-open-storage-file"></span><h2><span class="section-number">5.2. </span>Create or open storage file<a class="headerlink" href="#module-kf.readinput" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="kf.readinput.initiatefileforKF">
+<code class="sig-prename descclassname">kf.readinput.</code><code class="sig-name descname">initiatefileforKF</code><span class="sig-paren">(</span><em class="sig-param">statefile</em>, <em class="sig-param">phasefile</em>, <em class="sig-param">L</em>, <em class="sig-param">data</em>, <em class="sig-param">model</em>, <em class="sig-param">store</em>, <em class="sig-param">comm=False</em>, <em class="sig-param">toverlap=0</em>, <em class="sig-param">t_sep=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#initiatefileforKF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.initiatefileforKF" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Open h5py file for kalman filter.</dt><dd><dl class="field-list simple">
+<dt class="field-odd">statefile</dt>
+<dd class="field-odd"><p>file name and location</p>
+</dd>
+<dt class="field-even">phasefile</dt>
+<dd class="field-even"><p>file name and location</p>
+</dd>
+<dt class="field-odd">L</dt>
+<dd class="field-odd"><p>number of parameters</p>
+</dd>
+<dt class="field-even">model</dt>
+<dd class="field-even"><p>model description in tuple used for timefunction.py</p>
+</dd>
+<dt class="field-odd">store</dt>
+<dd class="field-odd"><p>is a tuple of things to store</p>
+</dd>
+<dt class="field-even">comm</dt>
+<dd class="field-even"><p>communicator if MPI used (e.g. MPI.COMM_WORLD)</p>
+</dd>
+<dt class="field-odd">toverlap</dt>
+<dd class="field-odd"><p>number of overlaping timesteps with past solution (only if restart KF)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="kf.readinput.reopenfileforKF">
+<code class="sig-prename descclassname">kf.readinput.</code><code class="sig-name descname">reopenfileforKF</code><span class="sig-paren">(</span><em class="sig-param">statefile</em>, <em class="sig-param">phasefile</em>, <em class="sig-param">comm=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#reopenfileforKF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.reopenfileforKF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to reopen file after closure to test readability</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/Geo4DLogo.jpg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=ManonDls&repo=KFTS-InSAR&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow.html">2. KFTS-InSAR Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="func.html">3. Functional model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kal.html">4. Kalman Filter</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">5. Setup and formating</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-kf.readinput">5.1. Read and formate data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-kf.readinput">5.2. Create or open storage file</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="test.html">6. Synthetic data</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="kal.html" title="previous chapter"><span class="section-number">4. </span>Kalman Filter</a></li>
+      <li>Next: <a href="test.html" title="next chapter"><span class="section-number">6. </span>Create synthetic data</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, M. Dalaison & R. Jolivet.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/fmt.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

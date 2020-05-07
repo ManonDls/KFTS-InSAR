@@ -1,0 +1,9 @@
+
+Setting up the functional model
+================================
+.. automodule:: kf.timefunction
+
+.. autoclass:: TimeFct
+   :members:
+.. note:: This trajectory model is used to make the forecast step of Kalman filtering
+

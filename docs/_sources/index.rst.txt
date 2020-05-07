@@ -1,0 +1,26 @@
+.. Project1 documentation master file, created by
+   sphinx-quickstart on Tue Sep 18 15:41:27 2018.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to KFTS-InSAR's documentation!
+====================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+   :numbered:
+
+   Introduction <intro>
+   KFTS-InSAR Workflow <flow>
+   Functional model <func>
+   Kalman Filter <kal>
+   Setup and formating <fmt>
+   Synthetic data <test>
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

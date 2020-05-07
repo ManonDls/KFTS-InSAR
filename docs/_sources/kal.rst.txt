@@ -1,0 +1,15 @@
+Kalman Filter
+*************
+
+Theory
+======
+
+See Dalaison & Jolivet, 2020 *A Kalman Filter Time Series Analysis method for InSAR*, JGR (submitted)
+
+Implementation
+==============
+
+.. automodule:: kf.KF_class
+.. autoclass:: Kalman
+   :members:
+

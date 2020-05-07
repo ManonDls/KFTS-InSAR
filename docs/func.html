@@ -1,0 +1,283 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>3. Setting up the functional model &#8212; KFTS-InSAR 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="4. Kalman Filter" href="kal.html" />
+    <link rel="prev" title="2. Main workflow for KFTS-InSAR" href="flow.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-kf.timefunction">
+<span id="setting-up-the-functional-model"></span><h1><span class="section-number">3. </span>Setting up the functional model<a class="headerlink" href="#module-kf.timefunction" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="kf.timefunction.TimeFct">
+<em class="property">class </em><code class="sig-prename descclassname">kf.timefunction.</code><code class="sig-name descname">TimeFct</code><span class="sig-paren">(</span><em class="sig-param">time</em>, <em class="sig-param">model</em>, <em class="sig-param">origintime=0.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialization of the class, which build parametrised function of time. 
+This creates an object that can build functional representations         and spit out names, etc.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><em>time</em>       : vector of the time (decimal years )</p></li>
+<li><p><em>originTime</em> : origin of the time used here</p></li>
+<li><p><em>model</em>      : contain string of function and associated parameters                              with syntax described in table below</p></li>
+</ul>
+</div></blockquote>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 48%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>model =</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[('POLY'</span>&#160;&#160; <span class="pre">,deg),</span></code></p></td>
+<td><p>polynomial of degree <code class="docutils literal notranslate"><span class="pre">deg</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">('COS'</span>&#160;&#160;&#160; <span class="pre">,freq),</span></code></p></td>
+<td><p>cosine of frequency <code class="docutils literal notranslate"><span class="pre">freq</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">('SIN'</span>&#160;&#160;&#160; <span class="pre">,freq),</span></code></p></td>
+<td><p>sine of frequency <code class="docutils literal notranslate"><span class="pre">freq</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">('STEP'</span>&#160;&#160; <span class="pre">,t1,t2,...),</span></code></p></td>
+<td><p>earthquake at time <code class="docutils literal notranslate"><span class="pre">ti</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">('HTAN'</span>&#160;&#160; <span class="pre">,t1,w1,t2,w2,...),</span></code></p></td>
+<td><p>slowslip(s) centred on <code class="docutils literal notranslate"><span class="pre">ti</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">('EXP'</span>&#160;&#160;&#160; <span class="pre">,t1,w1),</span></code></p></td>
+<td><p>starting and characteristic time</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">('LOG'</span>&#160;&#160;&#160; <span class="pre">,t1,w1),</span></code></p></td>
+<td><p>starting and characteristic time</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">('BSPLINE',order,t1,w1,t2,w2,...)</span></code></p></td>
+<td><p>peak(s) of deformation centred on <code class="docutils literal notranslate"><span class="pre">ti</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">('ISPLINE',order,t1,w1,t2,w2,...)]</span></code></p></td>
+<td><p>slowslip(s) centred on <code class="docutils literal notranslate"><span class="pre">ti</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.check_model">
+<code class="sig-name descname">check_model</code><span class="sig-paren">(</span><em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.check_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.check_model" title="Permalink to this definition">¶</a></dt>
+<dd><ul class="simple">
+<li><p><em>verbose</em> : print wordy description of the building block of the model (True or False)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.comp_phase_shift">
+<code class="sig-name descname">comp_phase_shift</code><span class="sig-paren">(</span><em class="sig-param">m</em>, <em class="sig-param">P=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.comp_phase_shift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.comp_phase_shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute oscillation amplitude and phase shift with its variances 
+from amplitudes of cosine and sine terms with their variances.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><em>m</em> : state vector containing at least all the model parameters (length &gt; self.L)</p></li>
+<li><p><em>P</em> : if error is known =P the state covariance (default None)</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.create_A">
+<code class="sig-name descname">create_A</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">M</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.create_A"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.create_A" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create A, the transition n × n matrix which converts m into mf
+Matrix used during prediction in the Kalman Filter</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><em>k</em> : the timestep</p></li>
+<li><p><em>M</em> : the state vector length</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.cut_model">
+<code class="sig-name descname">cut_model</code><span class="sig-paren">(</span><em class="sig-param">N</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.cut_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.cut_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that removes some of the component of the functional model 
+based on the length of parameters (N). This allows to include informations 
+when needed and not before.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.draw_model">
+<code class="sig-name descname">draw_model</code><span class="sig-paren">(</span><em class="sig-param">coeff</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.draw_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.draw_model" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Gives f(t) as defined in model</dt><dd><ul class="simple">
+<li><p><em>coeff</em> : contain multiplying coefficients of each function                         in the same order as in model                         (correspond to first elements of state vector m)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.expend_model">
+<code class="sig-name descname">expend_model</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">dt</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.expend_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.expend_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add events in reference model not in self.mod, 
+if we are getting temporarily close to the occurence of the event</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><em>dt</em> : anticipation time</p></li>
+</ul>
+</div></blockquote>
+<p>WORKS ONLY IF CHRONOLOGICAL ORDER IN MODEL</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.get_label">
+<code class="sig-name descname">get_label</code><span class="sig-paren">(</span><em class="sig-param">L</em>, <em class="sig-param">unit</em>, <em class="sig-param">phase=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.get_label"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.get_label" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an array of labels for each model parameters (name and units) 
+which can be used for plotting</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><em>L</em>     : number of parameters</p></li>
+<li><p><em>unit</em>  : string of length unit</p></li>
+<li><p><em>phase</em> : True if sine and cosine amplitudes converted into                         sine amplitude and phase shift</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.shift_t0">
+<code class="sig-name descname">shift_t0</code><span class="sig-paren">(</span><em class="sig-param">t0</em>, <em class="sig-param">coeff</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.shift_t0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.shift_t0" title="Permalink to this definition">¶</a></dt>
+<dd><ul class="simple">
+<li><p>t0 : shift in t0 (t0_new -t0_old)</p></li>
+<li><p>coeff  : parameter (assuming: offset, slope, sin, cos along last axis)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="kf.timefunction.TimeFct.transition_vect">
+<code class="sig-name descname">transition_vect</code><span class="sig-paren">(</span><em class="sig-param">t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.transition_vect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.timefunction.TimeFct.transition_vect" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Build linear transition vector that gives the model</dt><dd><ul class="simple">
+<li><p><em>t</em> : time can be one date or an array of dates</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This trajectory model is used to make the forecast step of Kalman filtering</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/Geo4DLogo.jpg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=ManonDls&repo=KFTS-InSAR&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow.html">2. KFTS-InSAR Workflow</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">3. Functional model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kal.html">4. Kalman Filter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fmt.html">5. Setup and formating</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test.html">6. Synthetic data</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="flow.html" title="previous chapter"><span class="section-number">2. </span>Main workflow for KFTS-InSAR</a></li>
+      <li>Next: <a href="kal.html" title="next chapter"><span class="section-number">4. </span>Kalman Filter</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, M. Dalaison & R. Jolivet.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/func.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

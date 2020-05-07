@@ -1,0 +1,7 @@
+Create synthetic data
+**************************
+
+.. automodule:: kf.utils.createinput
+.. autoclass:: SynteticKF
+   :members:
+
