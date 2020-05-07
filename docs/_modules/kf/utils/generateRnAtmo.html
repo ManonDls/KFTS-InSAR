@@ -42,13 +42,18 @@
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Generate synthetic atmospheric noise as the convolution </span>
 <span class="sd">    of a white noise and a decreasing exponential.</span>
-<span class="sd">        :shape: shape of 2D spatial grid (integer or tuple of integer)</span>
-<span class="sd">        :sigma: std of noise on one snapchot (float e.g. 1.)</span>
-<span class="sd">        :lamb:  spatial wavelength (float e.g. 30.)</span>
-<span class="sd">        :nt:    number of time snapchots (integer, default one)</span>
+<span class="sd">        * shape : integer or tuple of integers</span>
+<span class="sd">                shape of 2D spatial grid</span>
+<span class="sd">        * sigma : float </span>
+<span class="sd">                std of noise on one snapchot (e.g. 1.)</span>
+<span class="sd">        * lamb : float  </span>
+<span class="sd">                spatial wavelength (e.g. 30.)</span>
+<span class="sd">        * nt :  integer, optional</span>
+<span class="sd">                number of time snapchots</span>
 <span class="sd">        </span>
-<span class="sd">    Returns noise map(s) with shape (shape,nt) if nt&gt;1 &#39;&#39;&#39;</span>
-    
+<span class="sd">    Returns noise map(s) with shape (shape,nt) if nt&gt;1</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
     <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span><span class="nb">float</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span><span class="nb">int</span><span class="p">)):</span>
         <span class="c1">#square grid </span>
         <span class="n">shape</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>

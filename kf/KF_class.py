@@ -31,12 +31,16 @@ class Kalman(object):
         '''
         Class for a Kalman filter for an InSAR time series analysis
         Initialize the object
-        Args:
-            * data    : observations/measurements in class from readimput_mpi.py
-            * fctmod  : functional model in class from timefunction.py
-        Options :
-            * j,i   : indexes for 2-D image used for storage
-            * verbose  : print stuffs'''
+        
+        * data : object 
+                observations/measurements in class from readimput_mpi.py
+        * fctmod : object 
+                functional model in class from timefunction.py
+        * j,i : integers
+                indexes for 2-D image used for storage
+        * verbose : boolean 
+                print stuffs
+        '''
 
         self.verbose = verbose
 
@@ -67,9 +71,14 @@ class Kalman(object):
         '''
         Extract initial condition from OPENED infile (fin)  which stores previously 
         computed mk and Pk for all pixels including pixel[i,j]
-            * fin      : opened H5 file containing formely computed state 
-            * pasttime : already loaded time array in fin
-            * indxs    : already loaded index array'''
+        
+        * fin : object  
+                opened H5 file containing formely computed state 
+        * pasttime : array
+                already loaded time array in fin
+        * indxs : array
+                already loaded index array
+        '''
         
         i = self.xi
         j = self.yi
@@ -103,11 +112,13 @@ class Kalman(object):
     def start_new(self,m0, P0):
         '''
         Start from skratches
-            * m0    : Initial Model (1D array) 
-                      The length of the vector will determine how many element of the model 
-                      will be kept (in the order given in the model vector) 
-            * P0    : Initial Covariance (array)'''
-            
+        
+        * m0 : 1D array (N)
+                Initial Model. The length of the vector will determine how many 
+                element of the model will be kept (in the order given in the model vector) 
+        * P0 : 2D array (N,N)
+                Initial Covariance
+        '''    
         self.m       = np.concatenate((m0,[0.0])) #first phase fixed to zero
         self.P       = P0
         self.m_indxs = [0]   #indexes of phases in m after prediction phase
@@ -135,10 +146,18 @@ class Kalman(object):
       
     def create_Q(self, m_err, phi_err, add_err, M): 
         '''
-        Create process covariance Q from incertitude on model (m_err)
+        Create process covariance Q from uncertainty on model (m_err)
         and interferograms (phi_err) at kth time. 
-            * m_err : can be a float or an array of length L 
-            * M     : the state vector length '''
+        
+        * m_err : float or an array of length L 
+                model uncertainty
+        * phi_err : float
+                systematic error on phases (should be zero)
+        * add_err : float
+                systematic error on last forecast (square of std of mismodeling)
+        * M : integer
+                the state vector length
+        '''
         
         L = self.L 
             
@@ -158,7 +177,12 @@ class Kalman(object):
         Produce the measurement vector (D), the measurement matrix (H), and 
         the measurement covariance matrix (R) at a specific timestep (0≤ k <N) 
         --> if len(D)=n for this timestep, then H will be (n x (L+k+1)) and R (n x n)
-        indx  : indexes of phases store in self.m[L:]'''
+        
+        * k   : integer
+                itteration number
+        * indx : integer
+                indexes (with respect to t0) of phases in self.m[L:]
+        '''
         
         
         #find interferograms for time k
@@ -194,10 +218,17 @@ class Kalman(object):
 
     def predict(self,X, P, A, Q):
         '''
-        * X : The mean state estimate of the previous step ( k −1). 
-        * P : The state covariance of previous step ( k −1).
-        * A : The transition n × n matrix.
-        * Q : The process noise covariance matrix.'''
+        Forecast step
+
+        * X : array (N)
+            The mean state estimate of the previous step ( k −1). 
+        * P : array (N, N)
+            The state covariance of previous step ( k −1).
+        * A : array (N+1, N)
+            The transition matrix.
+        * Q : array (N+1, N+1)
+            The process noise covariance matrix.
+        '''
         
         Xf = np.dot(A, X)
         Pf = np.dot(A, np.dot(P, A.T)) + Q
@@ -205,7 +236,10 @@ class Kalman(object):
     
     def update(self,Xf, Pf): 
         ''' 
-        * Xf, Pf: the predicted mean and covariance of the state (matrices)'''
+        * Xf : array  
+            forecast mean of the state
+        * Pf : array
+            forecast covariance of the state'''
     
         Y = np.array(self.D)  # the measurement vector
         H = np.array(self.H)  # the measurement matrix
@@ -253,7 +287,10 @@ class Kalman(object):
         Check quality of fit of phases if verbose activated. 
         Compute residual weighted by its Covariance for analysed state 
         and print warning if pb
-         * eps_interf : accepted difference between computed and real interferograms.'''
+        
+        * eps_interf : float
+             accepted difference between computed and real interferograms.
+        '''
                     
         Cres = self.R + np.dot(self.H, np.dot(P, self.H.T))
         res = np.dot(np.linalg.inv(Cres), self.inovation(X, self.D))
@@ -263,12 +300,15 @@ class Kalman(object):
             print(res)
 
     
-    def reduce_sizes_m_P(self, k, t_sep=6):
+    def reduce_sizes_m_P(self, k, t_sep=12):
         '''
         Remove phases in m if not used to build interferograms and has converged
-            * k     : number of iteration 
-            * t_sep : max time separation allowed to build interferograms'''
-
+        
+        * k : integer 
+                number of iteration 
+        * t_sep : integer
+                max time separation allowed to build interferograms
+        '''
         if k >= t_sep :
             L = self.L   #number of parameters
             
@@ -292,9 +332,14 @@ class Kalman(object):
     def expend_m_P(self,L,n,PL):
         '''
         Open state vector and covariance (m and P) to add building parameters
-            * L  : index at which we open and insert new parameters in m and P
-            * n  : number of parameters to add 
-            * PL : apriori variance of the new parameters'''
+        
+        * L  : integer
+                index at which we open and insert new parameters in m and P
+        * n  : integer
+                number of parameters to add 
+        * PL : float
+                apriori variance of the new parameters
+        '''
         
         #increase size of m 
         self.m = np.concatenate((self.m[:L],np.zeros(n),self.m[L:]))
@@ -311,8 +356,12 @@ class Kalman(object):
         ''' 
         IN PROGRESS TESTED ON SYNTHETIC DATA
         Add model parameter for unexpected events not in model
-            * k : iteration
-            * kmod : minimum k at which modification can be applied'''
+            
+        * k : integer
+            iteration
+        * kmod : integer
+            minimum k at which modification can be applied
+        '''
         
         # Test for sharp variations in model parameters
         params = [i[:self.L] for i in m_all[-5:-1]]
@@ -369,18 +418,26 @@ class Kalman(object):
 
     def kf(self, m_err, phi_err, add_err, t_sep=6, plots=True, cm='jet', ax1=0, ax2=0):
         '''
-        Run kalman filter combining functions above (i.e. MAIN)
-            * m_err   : systematic error on model (should be 0)
-            * phi_err : systematic error on interferograms (should be 0)
-        
-        If plots=True (use when one instance of KF (=one pixel)):
-            * ax1 : in which plot evolution of parameters
-            * ax2 : in which plot evolution of predicted value and model
-            * cm  : the colormap of reference later discretised 
+        Run kalman filter combining other functions of class (i.e. MAIN)
             
-        To constrain the evolution of the number of parameters :
-            * t_sep : maximum time separation between interferograms, fix the minimum
-                      number of phases that must be kept in the state vector
+        * m_err   : array
+            systematic error on model (should be 0)
+        * phi_err : float 
+            systematic error on interferograms (should be 0)
+        * t_sep : integer
+            maximum time separation between interferograms, fix the minimum
+            number of phases that must be kept in the state vector. Constrain 
+            the maximum length of the state vector
+
+        * plots : boolean, optional 
+            WARNING - activate only if one instance of KF (=one pixel), 
+            then subsequent parameters must be specified
+                - ax1 : pyplot axis
+                    in which plot evolution of parameters
+                - ax2 : pyplot axis
+                    in which plot evolution of predicted value and model
+                - cm  : string or colormap
+                    the colormap of reference later discretised 
         '''
 
         #Prepare storage array       
@@ -464,13 +521,14 @@ class Kalman(object):
         #self.Innov = Innov
         return
             
-    def write_output(self, outstates, outphase, Ny=1, Nx=1):
+    def write_output(self, outstates, outphase):
         '''
         Save outputs of kalman filter for next run 
-            * outstates : Open h5file for state storage
-            * outphase  : Open h5file for phase storage
-        When iterative storage (2D case)
-            * Ny, Nx  : the number of pixels in each direction
+        
+        * outstates : h5py file 
+                Open h5file for state storage 
+        * outphase  : h5py file
+                Open h5file for phase storage
         '''
 
         i = self.xi

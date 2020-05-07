@@ -9,6 +9,20 @@ See Dalaison & Jolivet, 2020 *A Kalman Filter Time Series Analysis method for In
 Implementation
 ==============
 
+Introduction
+------------
+
+Below is the class computing the time series analysis pixel by pixel.
+Once the class is initialized, the main steps of the procedure are as follow:
+    - First you start a new time series analysis (``start_new``) OR you restart an existing one (``restart_from_file``)
+    - Then the function ``kf`` loops over (new) timesteps and compute iteratively 
+        1. the forecast (``predict``)
+        2. the analysis (``update``)
+    - Finally the output for the given pixel is stored (``write_output``)
+
+Functions
+---------
+
 .. automodule:: kf.KF_class
 .. autoclass:: Kalman
    :members:

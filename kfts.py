@@ -317,7 +317,7 @@ class RunKalmanFilter(object):
                 kal.kf(m_err, phi_err, add_err, plots = False, t_sep = data.max_tsep)
                     
                 # Store outputs
-                kal.write_output(fstates, fphases, Ny = data.Ntot, Nx = data.Nx)
+                kal.write_output(fstates, fphases)
 
         # Close file
         if self.isTraceOn():

@@ -9,13 +9,18 @@ def generateAtmo(shape,sigma,lamb,nt=1):
     '''
     Generate synthetic atmospheric noise as the convolution 
     of a white noise and a decreasing exponential.
-        :shape: shape of 2D spatial grid (integer or tuple of integer)
-        :sigma: std of noise on one snapchot (float e.g. 1.)
-        :lamb:  spatial wavelength (float e.g. 30.)
-        :nt:    number of time snapchots (integer, default one)
+        * shape : integer or tuple of integers
+                shape of 2D spatial grid
+        * sigma : float 
+                std of noise on one snapchot (e.g. 1.)
+        * lamb : float  
+                spatial wavelength (e.g. 30.)
+        * nt :  integer, optional
+                number of time snapchots
         
-    Returns noise map(s) with shape (shape,nt) if nt>1 '''
-    
+    Returns noise map(s) with shape (shape,nt) if nt>1
+    '''
+
     if (isinstance(shape,float) or isinstance(shape,int)):
         #square grid 
         shape = int(shape)

@@ -38,38 +38,69 @@
 <h2><span class="section-number">4.1. </span>Theory<a class="headerlink" href="#theory" title="Permalink to this headline">¶</a></h2>
 <p>See Dalaison &amp; Jolivet, 2020 <em>A Kalman Filter Time Series Analysis method for InSAR</em>, JGR (submitted)</p>
 </div>
+<div class="section" id="implementation">
+<h2><span class="section-number">4.2. </span>Implementation<a class="headerlink" href="#implementation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="introduction">
+<h3><span class="section-number">4.2.1. </span>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h3>
+<p>Below is the class computing the time series analysis pixel by pixel.
+Once the class is initialized, the main steps of the procedure are as follow:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>First you start a new time series analysis (<code class="docutils literal notranslate"><span class="pre">start_new</span></code>) OR you restart an existing one (<code class="docutils literal notranslate"><span class="pre">restart_from_file</span></code>)</p></li>
+<li><dl class="simple">
+<dt>Then the function <code class="docutils literal notranslate"><span class="pre">kf</span></code> loops over (new) timesteps and compute iteratively</dt><dd><ol class="arabic simple">
+<li><p>the forecast (<code class="docutils literal notranslate"><span class="pre">predict</span></code>)</p></li>
+<li><p>the analysis (<code class="docutils literal notranslate"><span class="pre">update</span></code>)</p></li>
+</ol>
+</dd>
+</dl>
+</li>
+<li><p>Finally the output for the given pixel is stored (<code class="docutils literal notranslate"><span class="pre">write_output</span></code>)</p></li>
+</ul>
+</div></blockquote>
+</div>
 <div class="section" id="module-kf.KF_class">
-<span id="implementation"></span><h2><span class="section-number">4.2. </span>Implementation<a class="headerlink" href="#module-kf.KF_class" title="Permalink to this headline">¶</a></h2>
+<span id="functions"></span><h3><span class="section-number">4.2.2. </span>Functions<a class="headerlink" href="#module-kf.KF_class" title="Permalink to this headline">¶</a></h3>
 <dl class="class">
 <dt id="kf.KF_class.Kalman">
 <em class="property">class </em><code class="sig-prename descclassname">kf.KF_class.</code><code class="sig-name descname">Kalman</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">fctmod</em>, <em class="sig-param">j=0</em>, <em class="sig-param">i=0</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class for a Kalman filter for an InSAR time series analysis
-Initialize the object
-Args:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>data    : observations/measurements in class from readimput_mpi.py</p></li>
-<li><p>fctmod  : functional model in class from timefunction.py</p></li>
-</ul>
-</div></blockquote>
-<dl class="simple">
-<dt>Options :</dt><dd><ul class="simple">
-<li><p>j,i   : indexes for 2-D image used for storage</p></li>
-<li><p>verbose  : print stuffs</p></li>
-</ul>
+Initialize the object</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>data<span class="classifier">object </span></dt><dd><p>observations/measurements in class from readimput_mpi.py</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>fctmod<span class="classifier">object </span></dt><dd><p>functional model in class from timefunction.py</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>j,i<span class="classifier">integers</span></dt><dd><p>indexes for 2-D image used for storage</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>verbose<span class="classifier">boolean </span></dt><dd><p>print stuffs</p>
+</dd>
+</dl>
+</li>
+</ul>
 <dl class="method">
 <dt id="kf.KF_class.Kalman.check_fit">
 <code class="sig-name descname">check_fit</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">P</em>, <em class="sig-param">eps_interf=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.check_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.check_fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check quality of fit of phases if verbose activated. 
 Compute residual weighted by its Covariance for analysed state 
 and print warning if pb</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>eps_interf : accepted difference between computed and real interferograms.</p></li>
+<ul class="simple">
+<li><dl class="simple">
+<dt>eps_interf<span class="classifier">float</span></dt><dd><p>accepted difference between computed and real interferograms.</p>
+</dd>
+</dl>
+</li>
 </ul>
-</div></blockquote>
 </dd></dl>
 
 <dl class="method">
@@ -77,21 +108,48 @@ and print warning if pb</p>
 <code class="sig-name descname">create_H_R_and_D</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">indxs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.create_H_R_and_D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.create_H_R_and_D" title="Permalink to this definition">¶</a></dt>
 <dd><p>Produce the measurement vector (D), the measurement matrix (H), and 
 the measurement covariance matrix (R) at a specific timestep (0≤ k &lt;N) 
-–&gt; if len(D)=n for this timestep, then H will be (n x (L+k+1)) and R (n x n)
-indx  : indexes of phases store in self.m[L:]</p>
+–&gt; if len(D)=n for this timestep, then H will be (n x (L+k+1)) and R (n x n)</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>k<span class="classifier">integer</span></dt><dd><p>itteration number</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>indx<span class="classifier">integer</span></dt><dd><p>indexes (with respect to t0) of phases in self.m[L:]</p>
+</dd>
+</dl>
+</li>
+</ul>
 </dd></dl>
 
 <dl class="method">
 <dt id="kf.KF_class.Kalman.create_Q">
 <code class="sig-name descname">create_Q</code><span class="sig-paren">(</span><em class="sig-param">m_err</em>, <em class="sig-param">phi_err</em>, <em class="sig-param">add_err</em>, <em class="sig-param">M</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.create_Q"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.create_Q" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create process covariance Q from incertitude on model (m_err)
+<dd><p>Create process covariance Q from uncertainty on model (m_err)
 and interferograms (phi_err) at kth time.</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>m_err : can be a float or an array of length L</p></li>
-<li><p>M     : the state vector length</p></li>
+<ul class="simple">
+<li><dl class="simple">
+<dt>m_err<span class="classifier">float or an array of length L </span></dt><dd><p>model uncertainty</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>phi_err<span class="classifier">float</span></dt><dd><p>systematic error on phases (should be zero)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>add_err<span class="classifier">float</span></dt><dd><p>systematic error on last forecast (square of std of mismodeling)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>M<span class="classifier">integer</span></dt><dd><p>the state vector length</p>
+</dd>
+</dl>
+</li>
 </ul>
-</div></blockquote>
 </dd></dl>
 
 <dl class="method">
@@ -99,25 +157,41 @@ and interferograms (phi_err) at kth time.</p>
 <code class="sig-name descname">detect_event</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">kmod</em>, <em class="sig-param">m_all</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.detect_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.detect_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>IN PROGRESS TESTED ON SYNTHETIC DATA
 Add model parameter for unexpected events not in model</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>k : iteration</p></li>
-<li><p>kmod : minimum k at which modification can be applied</p></li>
+<ul class="simple">
+<li><dl class="simple">
+<dt>k<span class="classifier">integer</span></dt><dd><p>iteration</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>kmod<span class="classifier">integer</span></dt><dd><p>minimum k at which modification can be applied</p>
+</dd>
+</dl>
+</li>
 </ul>
-</div></blockquote>
 </dd></dl>
 
 <dl class="method">
 <dt id="kf.KF_class.Kalman.expend_m_P">
 <code class="sig-name descname">expend_m_P</code><span class="sig-paren">(</span><em class="sig-param">L</em>, <em class="sig-param">n</em>, <em class="sig-param">PL</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.expend_m_P"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.expend_m_P" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Open state vector and covariance (m and P) to add building parameters</dt><dd><ul class="simple">
-<li><p>L  : index at which we open and insert new parameters in m and P</p></li>
-<li><p>n  : number of parameters to add</p></li>
-<li><p>PL : apriori variance of the new parameters</p></li>
-</ul>
+<dd><p>Open state vector and covariance (m and P) to add building parameters</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>L<span class="classifier">integer</span></dt><dd><p>index at which we open and insert new parameters in m and P</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>n<span class="classifier">integer</span></dt><dd><p>number of parameters to add</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>PL<span class="classifier">float</span></dt><dd><p>apriori variance of the new parameters</p>
+</dd>
+</dl>
+</li>
+</ul>
 </dd></dl>
 
 <dl class="method">
@@ -140,27 +214,51 @@ reflects noise of data around model.</p>
 <dl class="method">
 <dt id="kf.KF_class.Kalman.kf">
 <code class="sig-name descname">kf</code><span class="sig-paren">(</span><em class="sig-param">m_err</em>, <em class="sig-param">phi_err</em>, <em class="sig-param">add_err</em>, <em class="sig-param">t_sep=6</em>, <em class="sig-param">plots=True</em>, <em class="sig-param">cm='jet'</em>, <em class="sig-param">ax1=0</em>, <em class="sig-param">ax2=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.kf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.kf" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Run kalman filter combining functions above (i.e. MAIN)</dt><dd><ul class="simple">
-<li><p>m_err   : systematic error on model (should be 0)</p></li>
-<li><p>phi_err : systematic error on interferograms (should be 0)</p></li>
-</ul>
-</dd>
-<dt>If plots=True (use when one instance of KF (=one pixel)):</dt><dd><ul class="simple">
-<li><p>ax1 : in which plot evolution of parameters</p></li>
-<li><p>ax2 : in which plot evolution of predicted value and model</p></li>
-<li><p>cm  : the colormap of reference later discretised</p></li>
-</ul>
-</dd>
-<dt>To constrain the evolution of the number of parameters :</dt><dd><ul class="simple">
+<dd><p>Run kalman filter combining other functions of class (i.e. MAIN)</p>
+<ul>
 <li><dl class="simple">
-<dt>t_sep<span class="classifier">maximum time separation between interferograms, fix the minimum</span></dt><dd><p>number of phases that must be kept in the state vector</p>
+<dt>m_err<span class="classifier">array</span></dt><dd><p>systematic error on model (should be 0)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>phi_err<span class="classifier">float </span></dt><dd><p>systematic error on interferograms (should be 0)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>t_sep<span class="classifier">integer</span></dt><dd><p>maximum time separation between interferograms, fix the minimum
+number of phases that must be kept in the state vector. Constrain 
+the maximum length of the state vector</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>plots<span class="classifier">boolean, optional </span></dt><dd><p>WARNING - activate only if one instance of KF (=one pixel), 
+then subsequent parameters must be specified</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>ax1<span class="classifier">pyplot axis</span></dt><dd><p>in which plot evolution of parameters</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>ax2<span class="classifier">pyplot axis</span></dt><dd><p>in which plot evolution of predicted value and model</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>cm<span class="classifier">string or colormap</span></dt><dd><p>the colormap of reference later discretised</p>
 </dd>
 </dl>
 </li>
 </ul>
+</div></blockquote>
 </dd>
 </dl>
+</li>
+</ul>
 </dd></dl>
 
 <dl class="method">
@@ -185,24 +283,47 @@ subplots of size len(ax)</p>
 <dl class="method">
 <dt id="kf.KF_class.Kalman.predict">
 <code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">P</em>, <em class="sig-param">A</em>, <em class="sig-param">Q</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.predict" title="Permalink to this definition">¶</a></dt>
-<dd><ul class="simple">
-<li><p>X : The mean state estimate of the previous step ( k −1).</p></li>
-<li><p>P : The state covariance of previous step ( k −1).</p></li>
-<li><p>A : The transition n × n matrix.</p></li>
-<li><p>Q : The process noise covariance matrix.</p></li>
+<dd><p>Forecast step</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>X<span class="classifier">array (N)</span></dt><dd><p>The mean state estimate of the previous step ( k −1).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>P<span class="classifier">array (N, N)</span></dt><dd><p>The state covariance of previous step ( k −1).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>A<span class="classifier">array (N+1, N)</span></dt><dd><p>The transition matrix.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Q<span class="classifier">array (N+1, N+1)</span></dt><dd><p>The process noise covariance matrix.</p>
+</dd>
+</dl>
+</li>
 </ul>
 </dd></dl>
 
 <dl class="method">
 <dt id="kf.KF_class.Kalman.reduce_sizes_m_P">
-<code class="sig-name descname">reduce_sizes_m_P</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">t_sep=6</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.reduce_sizes_m_P"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.reduce_sizes_m_P" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Remove phases in m if not used to build interferograms and has converged</dt><dd><ul class="simple">
-<li><p>k     : number of iteration</p></li>
-<li><p>t_sep : max time separation allowed to build interferograms</p></li>
-</ul>
+<code class="sig-name descname">reduce_sizes_m_P</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">t_sep=12</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.reduce_sizes_m_P"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.reduce_sizes_m_P" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove phases in m if not used to build interferograms and has converged</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>k<span class="classifier">integer </span></dt><dd><p>number of iteration</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>t_sep<span class="classifier">integer</span></dt><dd><p>max time separation allowed to build interferograms</p>
+</dd>
+</dl>
+</li>
+</ul>
 </dd></dl>
 
 <dl class="method">
@@ -210,30 +331,42 @@ subplots of size len(ax)</p>
 <code class="sig-name descname">restart_from_file</code><span class="sig-paren">(</span><em class="sig-param">fin</em>, <em class="sig-param">pasttime</em>, <em class="sig-param">indxs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.restart_from_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.restart_from_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Extract initial condition from OPENED infile (fin)  which stores previously 
 computed mk and Pk for all pixels including pixel[i,j]</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>fin      : opened H5 file containing formely computed state</p></li>
-<li><p>pasttime : already loaded time array in fin</p></li>
-<li><p>indxs    : already loaded index array</p></li>
+<ul class="simple">
+<li><dl class="simple">
+<dt>fin<span class="classifier">object  </span></dt><dd><p>opened H5 file containing formely computed state</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>pasttime<span class="classifier">array</span></dt><dd><p>already loaded time array in fin</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>indxs<span class="classifier">array</span></dt><dd><p>already loaded index array</p>
+</dd>
+</dl>
+</li>
 </ul>
-</div></blockquote>
 </dd></dl>
 
 <dl class="method">
 <dt id="kf.KF_class.Kalman.start_new">
 <code class="sig-name descname">start_new</code><span class="sig-paren">(</span><em class="sig-param">m0</em>, <em class="sig-param">P0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.start_new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.start_new" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Start from skratches</dt><dd><ul class="simple">
+<dd><p>Start from skratches</p>
+<ul class="simple">
 <li><dl class="simple">
-<dt>m0<span class="classifier">Initial Model (1D array) </span></dt><dd><p>The length of the vector will determine how many element of the model 
-will be kept (in the order given in the model vector)</p>
+<dt>m0<span class="classifier">1D array (N)</span></dt><dd><p>Initial Model. The length of the vector will determine how many 
+element of the model will be kept (in the order given in the model vector)</p>
 </dd>
 </dl>
 </li>
-<li><p>P0    : Initial Covariance (array)</p></li>
-</ul>
+<li><dl class="simple">
+<dt>P0<span class="classifier">2D array (N,N)</span></dt><dd><p>Initial Covariance</p>
 </dd>
 </dl>
+</li>
+</ul>
 </dd></dl>
 
 <dl class="method">
@@ -246,28 +379,40 @@ will be kept (in the order given in the model vector)</p>
 <dt id="kf.KF_class.Kalman.update">
 <code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param">Xf</em>, <em class="sig-param">Pf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.update" title="Permalink to this definition">¶</a></dt>
 <dd><ul class="simple">
-<li><p>Xf, Pf: the predicted mean and covariance of the state (matrices)</p></li>
+<li><dl class="simple">
+<dt>Xf<span class="classifier">array  </span></dt><dd><p>forecast mean of the state</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Pf<span class="classifier">array</span></dt><dd><p>forecast covariance of the state</p>
+</dd>
+</dl>
+</li>
 </ul>
 </dd></dl>
 
 <dl class="method">
 <dt id="kf.KF_class.Kalman.write_output">
-<code class="sig-name descname">write_output</code><span class="sig-paren">(</span><em class="sig-param">outstates</em>, <em class="sig-param">outphase</em>, <em class="sig-param">Ny=1</em>, <em class="sig-param">Nx=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.write_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.write_output" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Save outputs of kalman filter for next run </dt><dd><ul class="simple">
-<li><p>outstates : Open h5file for state storage</p></li>
-<li><p>outphase  : Open h5file for phase storage</p></li>
-</ul>
-</dd>
-<dt>When iterative storage (2D case)</dt><dd><ul class="simple">
-<li><p>Ny, Nx  : the number of pixels in each direction</p></li>
-</ul>
+<code class="sig-name descname">write_output</code><span class="sig-paren">(</span><em class="sig-param">outstates</em>, <em class="sig-param">outphase</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.write_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.write_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save outputs of kalman filter for next run</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>outstates<span class="classifier">h5py file </span></dt><dd><p>Open h5file for state storage</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>outphase<span class="classifier">h5py file</span></dt><dd><p>Open h5file for phase storage</p>
+</dd>
+</dl>
+</li>
+</ul>
 </dd></dl>
 
 </dd></dl>
 
+</div>
 </div>
 </div>
 
@@ -307,7 +452,7 @@ will be kept (in the order given in the model vector)</p>
 <li class="toctree-l1"><a class="reference internal" href="func.html">3. Functional model</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">4. Kalman Filter</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#theory">4.1. Theory</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-kf.KF_class">4.2. Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation">4.2. Implementation</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="fmt.html">5. Setup and formating</a></li>

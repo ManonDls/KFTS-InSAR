@@ -56,8 +56,8 @@
 <span class="sd">        Class to initialise synthetic InSAR data to use with the Kalman Filter. </span>
 <span class="sd">        It mirrors the functions of the class ``kf.readinput.SetupKF`` </span>
 <span class="sd">        used for real observations. </span>
-<span class="sd">            :time: array of aquisitions times</span>
-<span class="sd">        </span>
+<span class="sd">            * time : array </span>
+<span class="sd">                    aquisitions times</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="n">time</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span> <span class="n">time</span>
@@ -69,13 +69,20 @@
         
 <div class="viewcode-block" id="SynteticKF.create_timeseries"><a class="viewcode-back" href="../../../test.html#kf.utils.createinput.SynteticKF.create_timeseries">[docs]</a>    <span class="k">def</span> <span class="nf">create_timeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">m_r</span><span class="p">,</span> <span class="n">sig_y</span><span class="p">,</span> <span class="n">origintime</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">atmo</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Create synthetic time series from </span>
-<span class="sd">            :model:      a model with the appropriate shape for the class TimeFct</span>
-<span class="sd">            :m_r:        array/list of the multiplicating factors for each element</span>
-<span class="sd">                           of the functional model</span>
-<span class="sd">            :sig_y:      std of noise on time series</span>
-<span class="sd">            :origintime: specify initial time if not zero</span>
-<span class="sd">            :atmo:       add atmospheric noise? (bool, default False) works for 2D only</span>
+<span class="sd">        Create synthetic time series </span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">            * model : list of tuples</span>
+<span class="sd">                    a model with the appropriate shape for the class TimeFct</span>
+<span class="sd">            * m_r : array/list</span>
+<span class="sd">                    multiplicating factors for each element of the functional model</span>
+<span class="sd">            * sig_y : float      </span>
+<span class="sd">                    std of noise on time series</span>
+<span class="sd">            * origintime : float, optional</span>
+<span class="sd">                    specify initial time if not zero</span>
+<span class="sd">            * atmo : boolean, optional       </span>
+<span class="sd">                    add atmospheric noise? works for 2D only</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            * the reference phases (without noise) </span>
 <span class="sd">            * the noisy phases </span>
@@ -128,11 +135,16 @@
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Create interferograms for synthetic phases with temporal and </span>
 <span class="sd">        perpendicular baseline constraints.</span>
-<span class="sd">            :rr:        variance in data (std**2)</span>
-<span class="sd">            :sig_i:     std of noise on phase differences</span>
-<span class="sd">            :t_sep:     time separation allowed</span>
-<span class="sd">            :perp_dist: separation of perp baseline authorise</span>
-<span class="sd">            :fmt:       define format of matrix R (&#39;diag&#39;,&#39;common_dates&#39;,&#39;num_links&#39;)</span>
+<span class="sd">            * rr    : float       </span>
+<span class="sd">                    variance in data (std**2)</span>
+<span class="sd">            * sig_i : float    </span>
+<span class="sd">                    std of noise on phase differences</span>
+<span class="sd">            * t_sep : integer, optional     </span>
+<span class="sd">                    time separation allowed</span>
+<span class="sd">            * perp_dist : float, optional</span>
+<span class="sd">                    separation of perp baseline (generated randomly with std 200) authorise</span>
+<span class="sd">            * fmt : string, optional      </span>
+<span class="sd">                    define format of matrix R (&#39;diag&#39;,&#39;common_dates&#39;,&#39;num_links&#39;)</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            * interferograms (difference of phases) </span>
 <span class="sd">            * covariance matrix of interferograms </span>
@@ -203,9 +215,10 @@
         
 <div class="viewcode-block" id="SynteticKF.build_R"><a class="viewcode-back" href="../../../test.html#kf.utils.createinput.SynteticKF.build_R">[docs]</a>    <span class="k">def</span> <span class="nf">build_R</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">rr</span><span class="p">,</span><span class="n">fmt</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">            :rr:  variance (std**2) in observation (=interferograms) noise (float)</span>
-<span class="sd">            :fmt: define format of matrix R (&#39;diag&#39;,&#39;common_dates&#39;,&#39;num_links&#39;)</span>
-<span class="sd">                    --&gt; &#39;diag&#39; seems the correct option</span>
+<span class="sd">            * rr : float  </span>
+<span class="sd">                variance (std**2) in observation (=interferograms) noise (float)</span>
+<span class="sd">            * fmt : string</span>
+<span class="sd">                define format of matrix R (&#39;diag&#39;,&#39;common_dates&#39;,&#39;num_links&#39;)</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         
         <span class="n">pair</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pair</span>

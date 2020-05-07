@@ -23,8 +23,8 @@ class SynteticKF(object):
         Class to initialise synthetic InSAR data to use with the Kalman Filter. 
         It mirrors the functions of the class ``kf.readinput.SetupKF`` 
         used for real observations. 
-            :time: array of aquisitions times
-        
+            * time : array 
+                    aquisitions times
         '''
         self.time = time
         self.date = time
@@ -36,13 +36,20 @@ class SynteticKF(object):
         
     def create_timeseries(self, model, m_r, sig_y, origintime=0.0, atmo=False):
         '''
-        Create synthetic time series from 
-            :model:      a model with the appropriate shape for the class TimeFct
-            :m_r:        array/list of the multiplicating factors for each element
-                           of the functional model
-            :sig_y:      std of noise on time series
-            :origintime: specify initial time if not zero
-            :atmo:       add atmospheric noise? (bool, default False) works for 2D only
+        Create synthetic time series 
+        
+        Parameters
+        ----------
+            * model : list of tuples
+                    a model with the appropriate shape for the class TimeFct
+            * m_r : array/list
+                    multiplicating factors for each element of the functional model
+            * sig_y : float      
+                    std of noise on time series
+            * origintime : float, optional
+                    specify initial time if not zero
+            * atmo : boolean, optional       
+                    add atmospheric noise? works for 2D only
         Returns:
             * the reference phases (without noise) 
             * the noisy phases 
@@ -95,11 +102,16 @@ class SynteticKF(object):
         '''
         Create interferograms for synthetic phases with temporal and 
         perpendicular baseline constraints.
-            :rr:        variance in data (std**2)
-            :sig_i:     std of noise on phase differences
-            :t_sep:     time separation allowed
-            :perp_dist: separation of perp baseline authorise
-            :fmt:       define format of matrix R ('diag','common_dates','num_links')
+            * rr    : float       
+                    variance in data (std**2)
+            * sig_i : float    
+                    std of noise on phase differences
+            * t_sep : integer, optional     
+                    time separation allowed
+            * perp_dist : float, optional
+                    separation of perp baseline (generated randomly with std 200) authorise
+            * fmt : string, optional      
+                    define format of matrix R ('diag','common_dates','num_links')
         Returns:
             * interferograms (difference of phases) 
             * covariance matrix of interferograms 
@@ -170,9 +182,10 @@ class SynteticKF(object):
         
     def build_R(self,rr,fmt):
         '''
-            :rr:  variance (std**2) in observation (=interferograms) noise (float)
-            :fmt: define format of matrix R ('diag','common_dates','num_links')
-                    --> 'diag' seems the correct option
+            * rr : float  
+                variance (std**2) in observation (=interferograms) noise (float)
+            * fmt : string
+                define format of matrix R ('diag','common_dates','num_links')
         '''
         
         pair = self.pair

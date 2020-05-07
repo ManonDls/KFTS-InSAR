@@ -64,12 +64,16 @@
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Class for a Kalman filter for an InSAR time series analysis</span>
 <span class="sd">        Initialize the object</span>
-<span class="sd">        Args:</span>
-<span class="sd">            * data    : observations/measurements in class from readimput_mpi.py</span>
-<span class="sd">            * fctmod  : functional model in class from timefunction.py</span>
-<span class="sd">        Options :</span>
-<span class="sd">            * j,i   : indexes for 2-D image used for storage</span>
-<span class="sd">            * verbose  : print stuffs&#39;&#39;&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        * data : object </span>
+<span class="sd">                observations/measurements in class from readimput_mpi.py</span>
+<span class="sd">        * fctmod : object </span>
+<span class="sd">                functional model in class from timefunction.py</span>
+<span class="sd">        * j,i : integers</span>
+<span class="sd">                indexes for 2-D image used for storage</span>
+<span class="sd">        * verbose : boolean </span>
+<span class="sd">                print stuffs</span>
+<span class="sd">        &#39;&#39;&#39;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
 
@@ -100,9 +104,14 @@
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Extract initial condition from OPENED infile (fin)  which stores previously </span>
 <span class="sd">        computed mk and Pk for all pixels including pixel[i,j]</span>
-<span class="sd">            * fin      : opened H5 file containing formely computed state </span>
-<span class="sd">            * pasttime : already loaded time array in fin</span>
-<span class="sd">            * indxs    : already loaded index array&#39;&#39;&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        * fin : object  </span>
+<span class="sd">                opened H5 file containing formely computed state </span>
+<span class="sd">        * pasttime : array</span>
+<span class="sd">                already loaded time array in fin</span>
+<span class="sd">        * indxs : array</span>
+<span class="sd">                already loaded index array</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         
         <span class="n">i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span>
         <span class="n">j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yi</span>
@@ -136,11 +145,13 @@
 <div class="viewcode-block" id="Kalman.start_new"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.start_new">[docs]</a>    <span class="k">def</span> <span class="nf">start_new</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">m0</span><span class="p">,</span> <span class="n">P0</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Start from skratches</span>
-<span class="sd">            * m0    : Initial Model (1D array) </span>
-<span class="sd">                      The length of the vector will determine how many element of the model </span>
-<span class="sd">                      will be kept (in the order given in the model vector) </span>
-<span class="sd">            * P0    : Initial Covariance (array)&#39;&#39;&#39;</span>
-            
+<span class="sd">        </span>
+<span class="sd">        * m0 : 1D array (N)</span>
+<span class="sd">                Initial Model. The length of the vector will determine how many </span>
+<span class="sd">                element of the model will be kept (in the order given in the model vector) </span>
+<span class="sd">        * P0 : 2D array (N,N)</span>
+<span class="sd">                Initial Covariance</span>
+<span class="sd">        &#39;&#39;&#39;</span>    
         <span class="bp">self</span><span class="o">.</span><span class="n">m</span>       <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">m0</span><span class="p">,[</span><span class="mf">0.0</span><span class="p">]))</span> <span class="c1">#first phase fixed to zero</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">P</span>       <span class="o">=</span> <span class="n">P0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">m_indxs</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1">#indexes of phases in m after prediction phase</span>
@@ -168,10 +179,18 @@
       
 <div class="viewcode-block" id="Kalman.create_Q"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.create_Q">[docs]</a>    <span class="k">def</span> <span class="nf">create_Q</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span><span class="p">,</span> <span class="n">M</span><span class="p">):</span> 
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Create process covariance Q from incertitude on model (m_err)</span>
+<span class="sd">        Create process covariance Q from uncertainty on model (m_err)</span>
 <span class="sd">        and interferograms (phi_err) at kth time. </span>
-<span class="sd">            * m_err : can be a float or an array of length L </span>
-<span class="sd">            * M     : the state vector length &#39;&#39;&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        * m_err : float or an array of length L </span>
+<span class="sd">                model uncertainty</span>
+<span class="sd">        * phi_err : float</span>
+<span class="sd">                systematic error on phases (should be zero)</span>
+<span class="sd">        * add_err : float</span>
+<span class="sd">                systematic error on last forecast (square of std of mismodeling)</span>
+<span class="sd">        * M : integer</span>
+<span class="sd">                the state vector length</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         
         <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span> 
             
@@ -191,7 +210,12 @@
 <span class="sd">        Produce the measurement vector (D), the measurement matrix (H), and </span>
 <span class="sd">        the measurement covariance matrix (R) at a specific timestep (0≤ k &lt;N) </span>
 <span class="sd">        --&gt; if len(D)=n for this timestep, then H will be (n x (L+k+1)) and R (n x n)</span>
-<span class="sd">        indx  : indexes of phases store in self.m[L:]&#39;&#39;&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        * k   : integer</span>
+<span class="sd">                itteration number</span>
+<span class="sd">        * indx : integer</span>
+<span class="sd">                indexes (with respect to t0) of phases in self.m[L:]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         
         
         <span class="c1">#find interferograms for time k</span>
@@ -227,10 +251,17 @@
 
 <div class="viewcode-block" id="Kalman.predict"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">X</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">Q</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        * X : The mean state estimate of the previous step ( k −1). </span>
-<span class="sd">        * P : The state covariance of previous step ( k −1).</span>
-<span class="sd">        * A : The transition n × n matrix.</span>
-<span class="sd">        * Q : The process noise covariance matrix.&#39;&#39;&#39;</span>
+<span class="sd">        Forecast step</span>
+
+<span class="sd">        * X : array (N)</span>
+<span class="sd">            The mean state estimate of the previous step ( k −1). </span>
+<span class="sd">        * P : array (N, N)</span>
+<span class="sd">            The state covariance of previous step ( k −1).</span>
+<span class="sd">        * A : array (N+1, N)</span>
+<span class="sd">            The transition matrix.</span>
+<span class="sd">        * Q : array (N+1, N+1)</span>
+<span class="sd">            The process noise covariance matrix.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         
         <span class="n">Xf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
         <span class="n">Pf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">))</span> <span class="o">+</span> <span class="n">Q</span>
@@ -238,7 +269,10 @@
     
 <div class="viewcode-block" id="Kalman.update"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">Xf</span><span class="p">,</span> <span class="n">Pf</span><span class="p">):</span> 
         <span class="sd">&#39;&#39;&#39; </span>
-<span class="sd">        * Xf, Pf: the predicted mean and covariance of the state (matrices)&#39;&#39;&#39;</span>
+<span class="sd">        * Xf : array  </span>
+<span class="sd">            forecast mean of the state</span>
+<span class="sd">        * Pf : array</span>
+<span class="sd">            forecast covariance of the state&#39;&#39;&#39;</span>
     
         <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">)</span>  <span class="c1"># the measurement vector</span>
         <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">)</span>  <span class="c1"># the measurement matrix</span>
@@ -286,7 +320,10 @@
 <span class="sd">        Check quality of fit of phases if verbose activated. </span>
 <span class="sd">        Compute residual weighted by its Covariance for analysed state </span>
 <span class="sd">        and print warning if pb</span>
-<span class="sd">         * eps_interf : accepted difference between computed and real interferograms.&#39;&#39;&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        * eps_interf : float</span>
+<span class="sd">             accepted difference between computed and real interferograms.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
                     
         <span class="n">Cres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
         <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">Cres</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">inovation</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">))</span>
@@ -296,12 +333,15 @@
             <span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
 
     
-<div class="viewcode-block" id="Kalman.reduce_sizes_m_P"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.reduce_sizes_m_P">[docs]</a>    <span class="k">def</span> <span class="nf">reduce_sizes_m_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span><span class="mi">6</span><span class="p">):</span>
+<div class="viewcode-block" id="Kalman.reduce_sizes_m_P"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.reduce_sizes_m_P">[docs]</a>    <span class="k">def</span> <span class="nf">reduce_sizes_m_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Remove phases in m if not used to build interferograms and has converged</span>
-<span class="sd">            * k     : number of iteration </span>
-<span class="sd">            * t_sep : max time separation allowed to build interferograms&#39;&#39;&#39;</span>
-
+<span class="sd">        </span>
+<span class="sd">        * k : integer </span>
+<span class="sd">                number of iteration </span>
+<span class="sd">        * t_sep : integer</span>
+<span class="sd">                max time separation allowed to build interferograms</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="n">k</span> <span class="o">&gt;=</span> <span class="n">t_sep</span> <span class="p">:</span>
             <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span>   <span class="c1">#number of parameters</span>
             
@@ -325,9 +365,14 @@
 <div class="viewcode-block" id="Kalman.expend_m_P"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.expend_m_P">[docs]</a>    <span class="k">def</span> <span class="nf">expend_m_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">L</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">PL</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Open state vector and covariance (m and P) to add building parameters</span>
-<span class="sd">            * L  : index at which we open and insert new parameters in m and P</span>
-<span class="sd">            * n  : number of parameters to add </span>
-<span class="sd">            * PL : apriori variance of the new parameters&#39;&#39;&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        * L  : integer</span>
+<span class="sd">                index at which we open and insert new parameters in m and P</span>
+<span class="sd">        * n  : integer</span>
+<span class="sd">                number of parameters to add </span>
+<span class="sd">        * PL : float</span>
+<span class="sd">                apriori variance of the new parameters</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         
         <span class="c1">#increase size of m </span>
         <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[:</span><span class="n">L</span><span class="p">],</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">[</span><span class="n">L</span><span class="p">:]))</span>
@@ -344,8 +389,12 @@
         <span class="sd">&#39;&#39;&#39; </span>
 <span class="sd">        IN PROGRESS TESTED ON SYNTHETIC DATA</span>
 <span class="sd">        Add model parameter for unexpected events not in model</span>
-<span class="sd">            * k : iteration</span>
-<span class="sd">            * kmod : minimum k at which modification can be applied&#39;&#39;&#39;</span>
+<span class="sd">            </span>
+<span class="sd">        * k : integer</span>
+<span class="sd">            iteration</span>
+<span class="sd">        * kmod : integer</span>
+<span class="sd">            minimum k at which modification can be applied</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         
         <span class="c1"># Test for sharp variations in model parameters</span>
         <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m_all</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
@@ -402,18 +451,26 @@
 
 <div class="viewcode-block" id="Kalman.kf"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.kf">[docs]</a>    <span class="k">def</span> <span class="nf">kf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">plots</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cm</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="n">ax1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ax2</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Run kalman filter combining functions above (i.e. MAIN)</span>
-<span class="sd">            * m_err   : systematic error on model (should be 0)</span>
-<span class="sd">            * phi_err : systematic error on interferograms (should be 0)</span>
-<span class="sd">        </span>
-<span class="sd">        If plots=True (use when one instance of KF (=one pixel)):</span>
-<span class="sd">            * ax1 : in which plot evolution of parameters</span>
-<span class="sd">            * ax2 : in which plot evolution of predicted value and model</span>
-<span class="sd">            * cm  : the colormap of reference later discretised </span>
+<span class="sd">        Run kalman filter combining other functions of class (i.e. MAIN)</span>
 <span class="sd">            </span>
-<span class="sd">        To constrain the evolution of the number of parameters :</span>
-<span class="sd">            * t_sep : maximum time separation between interferograms, fix the minimum</span>
-<span class="sd">                      number of phases that must be kept in the state vector</span>
+<span class="sd">        * m_err   : array</span>
+<span class="sd">            systematic error on model (should be 0)</span>
+<span class="sd">        * phi_err : float </span>
+<span class="sd">            systematic error on interferograms (should be 0)</span>
+<span class="sd">        * t_sep : integer</span>
+<span class="sd">            maximum time separation between interferograms, fix the minimum</span>
+<span class="sd">            number of phases that must be kept in the state vector. Constrain </span>
+<span class="sd">            the maximum length of the state vector</span>
+
+<span class="sd">        * plots : boolean, optional </span>
+<span class="sd">            WARNING - activate only if one instance of KF (=one pixel), </span>
+<span class="sd">            then subsequent parameters must be specified</span>
+<span class="sd">                - ax1 : pyplot axis</span>
+<span class="sd">                    in which plot evolution of parameters</span>
+<span class="sd">                - ax2 : pyplot axis</span>
+<span class="sd">                    in which plot evolution of predicted value and model</span>
+<span class="sd">                - cm  : string or colormap</span>
+<span class="sd">                    the colormap of reference later discretised </span>
 <span class="sd">        &#39;&#39;&#39;</span>
 
         <span class="c1">#Prepare storage array       </span>
@@ -497,13 +554,14 @@
         <span class="c1">#self.Innov = Innov</span>
         <span class="k">return</span></div>
             
-<div class="viewcode-block" id="Kalman.write_output"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.write_output">[docs]</a>    <span class="k">def</span> <span class="nf">write_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outstates</span><span class="p">,</span> <span class="n">outphase</span><span class="p">,</span> <span class="n">Ny</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">Nx</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="Kalman.write_output"><a class="viewcode-back" href="../../kal.html#kf.KF_class.Kalman.write_output">[docs]</a>    <span class="k">def</span> <span class="nf">write_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outstates</span><span class="p">,</span> <span class="n">outphase</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Save outputs of kalman filter for next run </span>
-<span class="sd">            * outstates : Open h5file for state storage</span>
-<span class="sd">            * outphase  : Open h5file for phase storage</span>
-<span class="sd">        When iterative storage (2D case)</span>
-<span class="sd">            * Ny, Nx  : the number of pixels in each direction</span>
+<span class="sd">        </span>
+<span class="sd">        * outstates : h5py file </span>
+<span class="sd">                Open h5file for state storage </span>
+<span class="sd">        * outphase  : h5py file</span>
+<span class="sd">                Open h5file for phase storage</span>
 <span class="sd">        &#39;&#39;&#39;</span>
 
         <span class="n">i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span>

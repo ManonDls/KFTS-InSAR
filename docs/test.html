@@ -40,24 +40,29 @@
 It mirrors the functions of the class <code class="docutils literal notranslate"><span class="pre">kf.readinput.SetupKF</span></code> 
 used for real observations.</p>
 <blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">time</dt>
-<dd class="field-odd"><p>array of aquisitions times</p>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>time<span class="classifier">array </span></dt><dd><p>aquisitions times</p>
 </dd>
 </dl>
+</li>
+</ul>
 </div></blockquote>
 <dl class="method">
 <dt id="kf.utils.createinput.SynteticKF.build_R">
 <code class="sig-name descname">build_R</code><span class="sig-paren">(</span><em class="sig-param">rr</em>, <em class="sig-param">fmt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/utils/createinput.html#SynteticKF.build_R"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.utils.createinput.SynteticKF.build_R" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Rr</dt>
-<dd class="field-odd"><p>variance (std**2) in observation (=interferograms) noise (float)</p>
-</dd>
-<dt class="field-even">Fmt</dt>
-<dd class="field-even"><p>define format of matrix R (‘diag’,’common_dates’,’num_links’)
-–&gt; ‘diag’ seems the correct option</p>
+<dd><ul class="simple">
+<li><dl class="simple">
+<dt>rr<span class="classifier">float  </span></dt><dd><p>variance (std**2) in observation (=interferograms) noise (float)</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>fmt<span class="classifier">string</span></dt><dd><p>define format of matrix R (‘diag’,’common_dates’,’num_links’)</p>
+</dd>
+</dl>
+</li>
+</ul>
 </dd></dl>
 
 <dl class="method">
@@ -66,23 +71,33 @@ used for real observations.</p>
 <dd><p>Create interferograms for synthetic phases with temporal and 
 perpendicular baseline constraints.</p>
 <blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">rr</dt>
-<dd class="field-odd"><p>variance in data (std**2)</p>
-</dd>
-<dt class="field-even">sig_i</dt>
-<dd class="field-even"><p>std of noise on phase differences</p>
-</dd>
-<dt class="field-odd">t_sep</dt>
-<dd class="field-odd"><p>time separation allowed</p>
-</dd>
-<dt class="field-even">perp_dist</dt>
-<dd class="field-even"><p>separation of perp baseline authorise</p>
-</dd>
-<dt class="field-odd">fmt</dt>
-<dd class="field-odd"><p>define format of matrix R (‘diag’,’common_dates’,’num_links’)</p>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>rr<span class="classifier">float       </span></dt><dd><p>variance in data (std**2)</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>sig_i<span class="classifier">float    </span></dt><dd><p>std of noise on phase differences</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>t_sep<span class="classifier">integer, optional     </span></dt><dd><p>time separation allowed</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>perp_dist<span class="classifier">float, optional</span></dt><dd><p>separation of perp baseline (generated randomly with std 200) authorise</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>fmt<span class="classifier">string, optional      </span></dt><dd><p>define format of matrix R (‘diag’,’common_dates’,’num_links’)</p>
+</dd>
+</dl>
+</li>
+</ul>
 </div></blockquote>
 <dl class="simple">
 <dt>Returns:</dt><dd><ul class="simple">
@@ -97,26 +112,37 @@ perpendicular baseline constraints.</p>
 <dl class="method">
 <dt id="kf.utils.createinput.SynteticKF.create_timeseries">
 <code class="sig-name descname">create_timeseries</code><span class="sig-paren">(</span><em class="sig-param">model</em>, <em class="sig-param">m_r</em>, <em class="sig-param">sig_y</em>, <em class="sig-param">origintime=0.0</em>, <em class="sig-param">atmo=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/utils/createinput.html#SynteticKF.create_timeseries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.utils.createinput.SynteticKF.create_timeseries" title="Permalink to this definition">¶</a></dt>
-<dd><dl>
-<dt>Create synthetic time series from </dt><dd><dl class="field-list simple">
-<dt class="field-odd">model</dt>
-<dd class="field-odd"><p>a model with the appropriate shape for the class TimeFct</p>
-</dd>
-<dt class="field-even">m_r</dt>
-<dd class="field-even"><p>array/list of the multiplicating factors for each element
-of the functional model</p>
-</dd>
-<dt class="field-odd">sig_y</dt>
-<dd class="field-odd"><p>std of noise on time series</p>
-</dd>
-<dt class="field-even">origintime</dt>
-<dd class="field-even"><p>specify initial time if not zero</p>
-</dd>
-<dt class="field-odd">atmo</dt>
-<dd class="field-odd"><p>add atmospheric noise? (bool, default False) works for 2D only</p>
+<dd><p>Create synthetic time series</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>model<span class="classifier">list of tuples</span></dt><dd><p>a model with the appropriate shape for the class TimeFct</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>m_r<span class="classifier">array/list</span></dt><dd><p>multiplicating factors for each element of the functional model</p>
 </dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>sig_y<span class="classifier">float      </span></dt><dd><p>std of noise on time series</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>origintime<span class="classifier">float, optional</span></dt><dd><p>specify initial time if not zero</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>atmo<span class="classifier">boolean, optional       </span></dt><dd><p>add atmospheric noise? works for 2D only</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+<dl>
 <dt>Returns:</dt><dd><ul class="simple">
 <li><p>the reference phases (without noise)</p></li>
 <li><p>the noisy phases</p></li>
@@ -155,20 +181,28 @@ extract indices of phases substracted together to build interfero</p>
 <dd><p>Generate synthetic atmospheric noise as the convolution 
 of a white noise and a decreasing exponential.</p>
 <blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">shape</dt>
-<dd class="field-odd"><p>shape of 2D spatial grid (integer or tuple of integer)</p>
-</dd>
-<dt class="field-even">sigma</dt>
-<dd class="field-even"><p>std of noise on one snapchot (float e.g. 1.)</p>
-</dd>
-<dt class="field-odd">lamb</dt>
-<dd class="field-odd"><p>spatial wavelength (float e.g. 30.)</p>
-</dd>
-<dt class="field-even">nt</dt>
-<dd class="field-even"><p>number of time snapchots (integer, default one)</p>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>shape<span class="classifier">integer or tuple of integers</span></dt><dd><p>shape of 2D spatial grid</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>sigma<span class="classifier">float </span></dt><dd><p>std of noise on one snapchot (e.g. 1.)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>lamb<span class="classifier">float  </span></dt><dd><p>spatial wavelength (e.g. 30.)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>nt<span class="classifier">integer, optional</span></dt><dd><p>number of time snapchots</p>
+</dd>
+</dl>
+</li>
+</ul>
 </div></blockquote>
 <p>Returns noise map(s) with shape (shape,nt) if nt&gt;1</p>
 </dd></dl>
