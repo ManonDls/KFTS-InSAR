@@ -24,19 +24,21 @@ import operator
 loc = '/Users/username/Yourfolder/'
 
 infile  = loc + 'Phases.h5' 
-outfile = loc + 'test/EQ_list.txt'
-outplotinfo = loc + 'test/EQ_info.txt'
 
-cmtdir = loc + '../../GCMT/'
-eqinfo  = cmtdir + 'CMT_KF.txt' 
-eqloc   = cmtdir + 'CMT_KF_ISC.txt' #relocalised events when available
+eqinfo  = '../../GCMT/CMT_KF.txt'
+eqloc   = '../../GCMT/CMT_KF_ISC.txt' #relocalised events when available
 lonfile = loc + 'lon.flt'
 latfile = loc + 'lat.flt'
 
+RELOC = False   # relocate using second catalogue (eqloc)?
+EXTEND = False  # get newer earthquakes
+SELECT = False  # select event with greater chance to appear in data
+
+#Outputs
 PLOT = True
-RELOC = True
-EXTEND = True
-outfig = loc+'test/earthquakes-GCMT.png'
+outfig  = loc+'test/earthquakes-GCMT.png'
+outfile = loc + 'test/EQ_list.txt'
+outplotinfo = loc + 'test/EQ_info.txt'
 
 # CONSTANTS
 mu  = 30 *10**9                     # rigidity Pa : kg m−1 s−2
@@ -80,14 +82,24 @@ if PLOT :
 #Get earthquake properties
 elon,elat,Deq,Mw = np.loadtxt(eqinfo, unpack=True, usecols=list(range(4)), dtype =np.float)
 Yr,Mo,Dy,Hr,Min  = np.loadtxt(eqinfo, unpack=True, usecols=list(range(4,9)), dtype ='i4')
-Leq = len(Yr)
 
-elon2,elat2,Deq2,Mw2 = np.loadtxt(eqloc, unpack=True, usecols=list(range(4)), dtype =np.float)
-Yr2,Mo2,Dy2,Hr2,Min2  = np.loadtxt(eqloc, unpack=True, usecols=list(range(4,9)), dtype ='i4')
+if isinstance(Yr,np.int32):
+    #Special case of one earthquake
+    Leq = 1
+    Yr,Mo,Dy,Hr,Min  = [Yr],[Mo],[Dy],[Hr],[Min]
+    elon,elat,Deq,Mw = [elon], [elat], [Deq], [Mw]
+else:
+    Leq = len(Yr)
 
 #tuples of dates
-edate2 = [(yr,mo,dy,hr,mi) for yr,mo,dy,hr,mi in zip(Yr2,Mo2,Dy2,Hr2,Min2)]
-edate  = [(yr,mo,dy,hr,mi) for yr,mo,dy,hr,mi in zip(Yr,Mo,Dy,Hr,Min)] 
+edate  = [(yr,mo,dy,hr,mi) for yr,mo,dy,hr,mi in zip(Yr,Mo,Dy,Hr,Min)]
+
+if RELOC:
+    # load second set of earthquake properties
+    elon2,elat2,Deq2,Mw2 = np.loadtxt(eqloc, unpack=True, usecols=list(range(4)), dtype =np.float)
+    Yr2,Mo2,Dy2,Hr2,Min2  = np.loadtxt(eqloc, unpack=True, usecols=list(range(4,9)), dtype ='i4')
+    edate2 = [(yr,mo,dy,hr,mi) for yr,mo,dy,hr,mi in zip(Yr2,Mo2,Dy2,Hr2,Min2)]
+
     
 #Get better locations
 if RELOC == True: 
@@ -150,17 +162,18 @@ for i in range(Leq):
 
 
 #Select relevent events 
-maskeq = np.ones(Leq) 
-maskeq[Deq>=20] = 0                 #depth inferior to 30km
-maskeq[teq<0.77] = 0                 #don't occur in first 6 monthes
-maskeq[Dist>0.2] = 0                #nearest pixel is closer than 0.5km
-maskeq[Mw<=3.7] = 0                   #Mw larger than 4.5
-maskeq[(Xeq>20)^(Yeq>20)] = 0       #not at the edge of image
-maskeq[(Xeq<nx-500)^(Yeq<ny-10)] = 0 
+maskeq = np.ones(Leq)
+if SELECT:
+    maskeq[Deq>=20] = 0                 #depth inferior to 30km
+    maskeq[teq<0.77] = 0                 #don't occur in first 6 monthes
+    maskeq[Dist>0.2] = 0                #nearest pixel is closer than 0.5km
+    maskeq[Mw<=3.7] = 0                   #Mw larger than 4.5
+    maskeq[(Xeq>20)^(Yeq>20)] = 0       #not at the edge of image
+    maskeq[(Xeq<nx-500)^(Yeq<ny-10)] = 0
 
-teq = teq[maskeq>0]
-Xeq = Xeq[maskeq>0]
-Yeq = Yeq[maskeq>0]
+    teq = teq[maskeq>0]
+    Xeq = Xeq[maskeq>0]
+    Yeq = Yeq[maskeq>0]
 
 #Radius of influence for Spatial P0
 '''Rinf = (1/(mu*Deq[maskeq>0]*10**3)*10**(1.5*Mw[maskeq>0]+9.1))**1/2.*10**(-3) #in km  

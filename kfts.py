@@ -76,7 +76,8 @@ class RunKalmanFilter(object):
 
         self.sig_a = literal_eval(secMS.get('sig_a'))
         self.sig_a = list(self.sig_a)
-
+        self.sig_eq = secMS.getfloat('sig_eq', fallback=30.)
+        
         secKFS       = config['KALMAN FILTER SETUP']
         self.VERBOSE = secKFS.getboolean('VERBOSE', fallback = False)
         self.PLOT    = secKFS.getboolean('PLOT', fallback = False)
@@ -160,7 +161,7 @@ class RunKalmanFilter(object):
             Leq = 1
             teq = [teq]
             Xeq,Yeq = [Xeq],[Yeq]
-            Rinf,sx,sy = np.array(Rinf),np.array(sx),np.array(sy)
+            Rinf,sx,sy = [Rinf],np.array(sx),np.array(sy)
         elif isinstance(teq,np.array):
             teq = teq.tolist()
             Leq = len(teq)
@@ -178,7 +179,8 @@ class RunKalmanFilter(object):
         P0eq = np.zeros((data.Ny,data.Nx,Leq))
         for i in range(Leq):
             width = Rinf[i]/(np.mean([np.mean(sx),np.mean(sy)]))
-            fct = twoD_Gauss(data.xv, data.yv, 30**2, center = (Xeq[i],Yeq[i]-data.miny), sig = width)
+            fct   = twoD_Gauss(data.xv[data.miny:data.maxy,:], data.yv[data.miny:data.maxy,:],
+                            self.sig_eq**2, center=(Xeq[i],Yeq[i]), sig=width)
             fct[fct < 1.] = 0.
             P0eq[:,:,i] = fct
 
