@@ -4,4 +4,12 @@ Introduction
 This program implements time series analysis for Interferometric Synthetic Aperture Radar (InSAR) 
 with a data assimilation approach. The algorithm is based on a Kalman smoother. 
 
-See Dalaison & Jolivet, 2020 *A Kalman Filter Time Series Analysis method for InSAR*, JGR (submitted)
+See Dalaison & Jolivet,  *A Kalman Filter Time Series Analysis method for InSAR*,
+Journal of Geophysical Research - Solid Earth, doi: 10.1029/2019JB019150 (2020)
+
+Source code: 
+https://github.com/ManonDls/KFTS-InSAR
+
+Personal websites:
+https://manondls.github.io
+http://www.geologie.ens.fr/~jolivet/Welcome.html
