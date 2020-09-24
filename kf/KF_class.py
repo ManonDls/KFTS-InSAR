@@ -88,7 +88,7 @@ class Kalman(object):
         self.P        = fin['state_cov'][j,i,:,:]  #3D (y,x,P)
         
         # Keep strack of where we are with respect to first data of time series
-        self.m_indxs  = indxs[:]                   #indexes of phases in m after prediction phase 
+        self.m_indxs  = indxs                             #indexes of phases in m after prediction phase 
         self.t        = np.concatenate((pasttime,self.t))
         self.t        = np.unique(self.t)                 
 
@@ -246,10 +246,12 @@ class Kalman(object):
         R = np.array(self.R)  # the measurement covariance matrix
         
         if len(Y) == 0 : #no information for this date
-            return (Xf,Pf)
+            self.inov = np.nan            #innovation has no meaning here
+            self.K = np.zeros((self.L,1)) #kalman gain has no meaning here
+            return (Xf,Pf)                #return forecast
         else : 
             #Data - predictive distribution of Y
-            inov = self.inovation(Xf,Y)
+            self.inov = self.innovation(Xf,Y)
             #the Covariance or predictive mean of Y
             IS = R + np.dot(H, np.dot(Pf, H.T)) 
             
@@ -262,7 +264,7 @@ class Kalman(object):
             self.K = np.dot(Pf, np.dot(H.T, np.linalg.inv(IS)))
             
             #the estimated mean state 
-            X = Xf + np.dot(self.K,inov)  #Y-IM is residual or "innovation vector"
+            X = Xf + np.dot(self.K,self.inov)  #Y-IM is residual or "innovation vector"
             
             #the estimated covariance state
             P = Pf - np.dot(self.K,np.dot(H,Pf))
@@ -272,7 +274,7 @@ class Kalman(object):
 
             return(X,P)
     
-    def inovation(self, Xf, Y):
+    def innovation(self, Xf, Y):
         '''
         Compute residual or innovation vector
         Innovation for phases is not informative. After a few steps,
@@ -293,7 +295,7 @@ class Kalman(object):
         '''
                     
         Cres = self.R + np.dot(self.H, np.dot(P, self.H.T))
-        res = np.dot(np.linalg.inv(Cres), self.inovation(X, self.D))
+        res = np.dot(np.linalg.inv(Cres), self.innovation(X, self.D))
 
         if abs(np.mean(res)) > eps_interf :
             print('WARNING: post-fit residual too big (mean >' +str(eps_interf)+ 'mm)')
@@ -461,15 +463,15 @@ class Kalman(object):
         #Loop on time
         for k in range(k_start,k_end): 
             
-            self.m_indxs.append(self.idx0+k) #add last phase index 
-            self.create_H_R_and_D(k, [x-self.idx0 for x in self.m_indxs])
+            self.m_indxs = np.append(self.m_indxs, self.idx0+k) #add last phase index 
+            self.create_H_R_and_D(k, self.m_indxs-self.idx0)
             
             (mf,Pf) = self.predict(self.m, self.P, self.A, self.Q)
             (self.m,self.P) = self.update(mf, Pf)
             
             #store info
-            #Gain.extend( [np.linalg.norm(self.K[-1,:])] )
-            #Innov.extend( [np.mean(np.array(self.D) -np.dot(np.array(self.H), mf))])
+            Gain.append( np.linalg.norm(self.K[:self.L,:], axis=1) ) #Gain of model parameters
+            Innov.extend( [np.mean(self.inov)] )
             
             #Reduce size of m (part with phases)
             if k >= t_sep:
@@ -517,11 +519,12 @@ class Kalman(object):
             ax2.set_ylabel('Displacement (mm)')
             self.title_labels(ax1)
         
-        #self.Gain = Gain
-        #self.Innov = Innov
+        self.Gain = np.array(Gain)
+        self.Innov = np.array(Innov)
+
         return
             
-    def write_output(self, outstates, outphase):
+    def write_output(self, outstates, outphase, outupdate=None):
         '''
         Save outputs of kalman filter for next run 
         
@@ -529,6 +532,8 @@ class Kalman(object):
                 Open h5file for state storage 
         * outphase  : h5py file
                 Open h5file for phase storage
+        * outupdate : h5py file
+                Open h5file for gain and innovation (Optional) 
         '''
 
         i = self.xi
@@ -537,7 +542,7 @@ class Kalman(object):
         if np.count_nonzero(outstates['indx'][:]) == 0 :  #check if empty 
             #Store pixel independent information
             outstates['indx'][:]  = self.m_indxs
-            outstates['tims'][:]  = self.t[self.m_indxs[0]-self.idx0:self.m_indxs[-1]-self.idx0+1]
+            outstates['tims'][:]  = self.t[self.m_indxs-self.idx0]
             outphase['idx0'][...] = self.idx0
             outphase['tims'][:]   = self.t
         
@@ -546,7 +551,11 @@ class Kalman(object):
         outstates['state_cov'][j,i,:,:] = self.P
         outphase['rawts'][j,i,:]        = self.phases
         outphase['rawts_std'][j,i,:]    = self.std
-            
+        
+        #Store Gain and Innovation 
+        outupdate["mean_innov"][j,i,:] = self.Innov
+        outupdate["param_gain"][j,i,:,:] = self.Gain
+
         # All done
         return
         

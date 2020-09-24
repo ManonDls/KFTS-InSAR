@@ -280,16 +280,10 @@ class RunKalmanFilter(object):
         if self.isTraceOn():
             print('-- Open H5 file for storage --')
 
-        fstates, fphases = infmt.initiatefileforKF(
-            self.outdir + 'States.h5', 
-            self.outdir + 'Phases.h5', 
-            L, 
-            data, 
-            self.model, 
-            (m_err,self.sig_i,self.sig_y), 
-            comm = self.comm, 
-            toverlap = toverl
-            )
+        fstates, fphases, fupdate = infmt.initiatefileforKF(
+                    self.outdir + 'States.h5', self.outdir + 'Phases.h5',
+                    L, data, self.model, (m_err,self.sig_i,self.sig_y),
+                    updtfile=outdir + 'Updates.h5', comm = self.comm, toverlap = toverl)
 
         if self.isTraceOn():
             print('-- START Kalman Filter --')
@@ -319,13 +313,14 @@ class RunKalmanFilter(object):
                 kal.kf(m_err, phi_err, add_err, plots = False, t_sep = data.max_tsep)
                     
                 # Store outputs
-                kal.write_output(fstates, fphases)
+                kal.write_output(fstates, fphases, outupdate=fupdate)
 
         # Close file
         if self.isTraceOn():
             print('-- Close H5 files in {} --'.format(self.outdir))
         fstates.close()
         fphases.close()
+        fupdate.close()
         if self.UPDT == True:
             finstate.close()
         

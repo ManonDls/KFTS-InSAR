@@ -62,9 +62,9 @@ class SetupKF(object):
         else :
             self.spatial_grid(xmin = subregion.x1, xmax = subregion.x2, 
                         ymin = subregion.y1, ymax = subregion.y2, truncate = True)
-            
-        self.dividepxls(mpi,mpiarg)
         
+        self.dividepxls(mpi,mpiarg)
+
         self.time        = fin['tims'][:]
         self.links       = fin['Jmat'][:]                              #2D (interf,time)
         self.bperp       = fin['bperp'][:]                             #perpendicular baseline (interf)
@@ -175,7 +175,7 @@ class SetupKF(object):
         
     def pxl_with_nodata(self,thres=30, chunks=200, plot=False) :
         '''
-        Check for pixels with little and build mask.
+        Check for pixels with little data and build mask.
             :xv,yv: grid element 
         Opts:
             :thres:  minimum number of interferogram required to be available for one pixel
@@ -316,7 +316,7 @@ def kdelta(i,j):
         
 
 def initiatefileforKF(statefile, phasefile, L, data, model, store, 
-                           comm=False, toverlap=0, t_sep= None):
+                           updtfile=None, comm=False, toverlap=0, t_sep= None):
     '''
     Open h5py file for kalman filter.
         :statefile: file name and location 
@@ -324,6 +324,7 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
         :L:         number of parameters 
         :model:     model description in tuple used for timefunction.py
         :store:     is a tuple of things to store
+        :updtfile:  file name to store additional statistics about KF analysis
         :comm:      communicator if MPI used (e.g. MPI.COMM_WORLD)
         :toverlap:  number of overlaping timesteps with past solution (only if restart KF)
     '''
@@ -335,10 +336,14 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
     if comm==False :
         fstates = h5py.File(statefile, 'w')
         fphases = h5py.File(phasefile, 'w')
+        if updtfile is not None:
+            fupdt = h5py.File(updtfile, 'w')
     else : 
         fstates = h5py.File(statefile, 'w', driver='mpio', comm=comm)
         fphases = h5py.File(phasefile, 'w', driver='mpio', comm=comm)
-    
+        if updtfile is not None:
+            fupdt = h5py.File(updtfile, 'w', driver='mpio', comm=comm)
+
     if t_sep is None:
         tsep = data.max_tsep
     else:
@@ -383,7 +388,19 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
     idx = fphases.create_dataset('idx0',data=0)
     idx.attrs['help'] = 'Index of first phase in file with respect to first reference date of time series'
     
-    return fstates,fphases
+    # Save part of the innovation and Gain to have information 
+    # about the predictive power of the model 
+    innv = fupdt.create_dataset('mean_innov',(Ny,Nx,lent-1),'f')
+    innv.attrs['help'] = 'Mean innovation (or residual) for the last phase estimate at each time step'
+
+    # about the convergence and sensitivity to data of model parameters
+    gain = fupdt.create_dataset('param_gain',(Ny,Nx,lent-1,L),'f')
+    gain.attrs['help'] = 'Norm of the gain for the L model parameters at each time step'
+
+    if updtfile is not None:
+        return fstates,fphases,fupdt
+    else :
+        return fstates,fphases
 
 
 def reopenfileforKF(statefile, phasefile, comm=False):

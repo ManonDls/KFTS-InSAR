@@ -9,7 +9,9 @@ from __future__ import print_function
 from builtins import range
 import numpy as np
 import netCDF4
+import operator
 import scipy.linalg as la
+import scipy.interpolate as sciint
 
 import matplotlib
 matplotlib.use('Agg')
@@ -21,7 +23,23 @@ import matplotlib.cm as mcm
 ###########################################################################
 # WORK FROM DATA
     
+class MidpointNormalize(colors.Normalize):
+    ''' To center divergent colorbar on zero
+    (or other midpoint value)
+    '''
+    def __init__(self, vmin, vmax, midpoint=0, clip=False):
+        self.midpoint = midpoint
+        colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        from scipy import ma, interp
         
+        normalized_min = max(0., 1. / 2 * (1 - abs((self.midpoint - self.vmin) / (self.midpoint - self.vmax))))
+        normalized_max = min(1., 1. / 2 * (1 + abs((self.vmax - self.midpoint) / (self.midpoint - self.vmin))))
+        normalized_mid = 0.5
+        x, y = [self.vmin, self.midpoint, self.vmax], [normalized_min, normalized_mid, normalized_max]
+        return ma.masked_array(interp(value, x, y))
+
 def plot_covariance(fig,ax,m,P,L):
     ''' 
     Plot matrix P in 2 subplots : 
@@ -49,25 +67,30 @@ def plot_param_2D(figname, m, L, xv, yv, bounds=None, axlim=None, cm=plt.get_cma
     * m       : 3D parameter array to plot
     * L       : number of parameters (will select the L first elements of m)
     * xv, yv  : spatial meshgrid for x and y tick label
-    * bounds  : color map bounding values (list of pairs with length L)'''
+    * bounds  : color map bounding values (list of pairs with length L)
+    * norm    : colorbar normalization 'linear' 'log' or 'center'.
+                'center' is for a linear colormap with the midcolor of cm attributed to zero '''
     
-    Taillefigure = (np.shape(xv)[1]/400.*L+1,np.shape(xv)[0]/500.)
+    Taillefigure = (np.shape(xv)[1]/300.*L+1,np.shape(xv)[0]/400.)
     fig,ax = plt.subplots(1,L,figsize=Taillefigure,sharex=True,sharey=True) #(L*4,3.5)
     
     if bounds == None:
         bounds = [[]]*L
         for i in range(L):
-            if norm =='linear':
+            if norm in ['linear','center']:
                 bounds[i] = [np.nanmean(m[:,:,i])-3*np.nanstd(m[:,:,i]),np.nanmean(m[:,:,i])+3*np.nanstd(m[:,:,i])]
             elif norm =='log':
                 bounds[i] = [np.nanmin(m[:,:,i]),np.nanmax(m[:,:,i])]
         print("bounds",bounds)
         
     #Plot retrieved parameters map
-    param_names = ['offset','velocity','sine amplitude','cos amplitude','step1','step2']
+    param_names = ['offset','velocity','sine amplitude','cos amplitude','step1','step2','step3','step4']
     for i in range(L):
         if norm =='linear':
             img0 = ax[i].pcolormesh(xv,yv,m[:,:,i],vmin=bounds[i][0],vmax=bounds[i][1],cmap=cm)
+        elif norm =='center':
+            normcol = MidpointNormalize(vmin=bounds[i][0], vmax=bounds[i][1], midpoint=0)
+            img0 = ax[i].pcolormesh(xv,yv,m[:,:,i], cmap=cm, norm=normcol)
         elif norm == 'log':
             img0 = ax[i].pcolormesh(xv,yv,m[:,:,i],norm=colors.LogNorm(vmin=bounds[i][0],vmax=bounds[i][1]),cmap=cm)
             
@@ -266,7 +289,7 @@ def plot_baselines(t, bperp, imoins, iplus, locfig, cm=plt.get_cmap('jet'), reso
     '''
     Plot baselines and interferograms
     * t             : time array (N)
-    * bperp         : perpendicular baselines (M or N)
+    * bperp         : perpendicular baselines (M or N) (or None)
     * imoins, iplus : given by get_interf_pairs() (M)
     * cm            : reference color map discretised later
     * resol         : dpi image resolution (default is 250)'''
@@ -279,7 +302,16 @@ def plot_baselines(t, bperp, imoins, iplus, locfig, cm=plt.get_cmap('jet'), reso
     else :                               #if substract lower phase to higher ones 
         iinf, isup = imoins, iplus
     
-    if (len(bperp)==len(imoins)):        #bperp the same lengt as links(axis=0)
+    if bperp is None :
+        #If spatial baseline not given, display temporal baseline only
+        print("WARNING: spatial baseline is None")
+        
+        #sort interferograms by date of first date 
+        L = sorted(zip(iinf,isup), key=operator.itemgetter(0))
+        iinf,isup = zip(*L)
+        iinf,isup = np.array(iinf),np.array(isup)
+
+    elif (len(bperp)==len(imoins)):      #bperp the same lengt as links(axis=0)
         bperpt = np.zeros(len(t))        #create pberp with size of time 
         for i in range(1,len(t)):        #t=0 as reference
             if i in isup:
@@ -290,25 +322,31 @@ def plot_baselines(t, bperp, imoins, iplus, locfig, cm=plt.get_cmap('jet'), reso
     elif (len(bperp)==len(t)):      #bperp the same length as time
         bperpt = bperp
     
-    fig,ax = plt.subplots(1,1)
+    fig,ax = plt.subplots(1,1,figsize=(8.7,6))
     cmap = [cm(1.*i/len(t)) for i in range(len(t))]
     
     # Plot Network
-    ax.plot([t[iinf],t[isup]],[bperpt[iinf],bperpt[isup]],'-',c='0.4')
-   
-    for k in range(len(t)):
-        # Plot the points
-        ax.plot(t[k], bperpt[k], '.', markersize=10, c=cmap[k]) 
-   
-    if np.nanmax(t) > 100.0:
+    if bperp is None:
+        ax.plot([t[iinf],t[isup]],[np.array(range(len(iinf))),np.array(range(len(iinf)))],'-',c='0.5',linewidth=0.8)
+        ax.set_ylabel('Interferogram number')
+    else:
+        ax.plot([t[iinf],t[isup]],[bperpt[iinf],bperpt[isup]],'-',c='0.4',linewidth=0.8)
+        ax.plot(t, bperpt, '.', markersize=10, c='deeppink')
+        ax.set_ylabel('Perpendicular baseline (m)')
+
+    if np.nanmax(t)-np.nanmin(t) > 100.0:
         ax.set_xlabel('Time (days)')
     else :
-        ax.set_xlabel('Time (yrs)')    
-    ax.set_ylabel('Perpendicular baseline (m)')
+        ax.tick_params(axis='x',which='minor',direction='in',length=4)
+        ax.set_xlim(np.nanmin(t)-0.05,np.nanmax(t)+0.05)
+        ax.set_xticks(t, minor=True)
+        ax.set_xlabel('Time (yrs)') 
+
     fig.tight_layout()
     fig.savefig(locfig+'baselines.png',bbox_inches='tight',dpi=resol)
     plt.close()
-
+    
+    
 def plot_errors(ax0, ax1, time, true, model_kf, model_ls, sig_y,\
             interf, interf_kf, interf_ls):
     '''
@@ -386,6 +424,7 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
             igrams = igrams[y1:y2,x1:x2,:]
     
     if bounds == None:
+        print("Warning: Computing bounds of color scale, may be very long for big array")
         bounds = [np.nanmean(igrams)-2*np.nanstd(igrams),np.nanmean(igrams)+2*np.nanstd(igrams)]
         print("bounds",bounds)
     
@@ -402,6 +441,7 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
             plt.text(0.1,0.05,str(i),color='r',transform=plt.gca().transAxes)
         else :
             plt.text(0.1,0.05,labels[i],color='r',transform=plt.gca().transAxes)
+        
         if faults is not None:
             for fault in faults:
                 lonflt,latflt = fault
@@ -412,7 +452,11 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
         plt.colorbar()
         plt.tight_layout()
         
-        fig.savefig(figfile +'interfero_' +str(i) +'.png', dpi=250)
+        if labels is None:
+            fig.savefig(figfile +'interfero_' +str(i) +'.png', dpi=250)
+        else:
+            fig.savefig(figfile +'interfero_'+labels[i] +'.png', dpi=250)
+        
         plt.close('all')
 
             
@@ -432,8 +476,8 @@ def colorbar(fig, value, legend, cm='jet', bound=None):
     norm = colors.Normalize(minb,maxb)
     mappable = mcm.ScalarMappable(norm,cm)
     mappable.set_array(value)
-    fig.subplots_adjust(right=0.86)
-    cb_ax = fig.add_axes([0.88, 0.2, 0.02, 0.7])
+    fig.subplots_adjust(right=0.84)
+    cb_ax = fig.add_axes([0.92, 0.2, 0.02, 0.6])
     cb = fig.colorbar(mappable,cax=cb_ax)
     cb.set_label(legend,fontsize='12')
     
@@ -464,7 +508,8 @@ def load_topo_grd(topofile,lon,lat):
     topodat   = topodat[mina0:maxa0,mina1:maxa1]
     
     return tlon,tlat,topodat
-
+    
+    
 def inchd2los(incfile, headfile):
     ''' taken and modified from CSI insar.py
     Takes incidence and heading as binary files (e.g. inc.flt)
