@@ -4,7 +4,7 @@ Kalman Filter
 Theory
 ======
 
-See Dalaison & Jolivet, 2020 *A Kalman Filter Time Series Analysis method for InSAR*, JGR (submitted)
+See Dalaison & Jolivet, 2020 *A Kalman Filter Time Series Analysis method for InSAR*, Journal of Geophysical Research - Solid Earth, `doi:10.1029/2019JB019150 <https://manondls.github.io/publications/Dalaison_Jolivet_KFTS_2020.pdf>`_.
 
 Implementation
 ==============

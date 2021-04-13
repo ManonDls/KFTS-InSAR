@@ -5,11 +5,15 @@ This program implements time series analysis for Interferometric Synthetic Apert
 with a data assimilation approach. The algorithm is based on a Kalman smoother. 
 
 See Dalaison & Jolivet,  *A Kalman Filter Time Series Analysis method for InSAR*,
-Journal of Geophysical Research - Solid Earth, doi: 10.1029/2019JB019150 (2020)
+Journal of Geophysical Research - Solid Earth, `doi:10.1029/2019JB019150 <https://manondls.github.io/publications/Dalaison_Jolivet_KFTS_2020.pdf>`_.
 
 Source code: 
 https://github.com/ManonDls/KFTS-InSAR
 
+.. image:: Diagram-KFTS.png
+    :width: 500
+
 Personal websites:
-https://manondls.github.io
-http://www.geologie.ens.fr/~jolivet/Welcome.html
+
+- https://manondls.github.io
+- http://www.geologie.ens.fr/~jolivet/Welcome.html
