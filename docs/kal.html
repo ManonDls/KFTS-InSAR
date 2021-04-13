@@ -204,8 +204,8 @@ N (or equivalently self.L) may increase with latter iterations</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="kf.KF_class.Kalman.inovation">
-<code class="sig-name descname">inovation</code><span class="sig-paren">(</span><em class="sig-param">Xf</em>, <em class="sig-param">Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.inovation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.inovation" title="Permalink to this definition">¶</a></dt>
+<dt id="kf.KF_class.Kalman.innovation">
+<code class="sig-name descname">innovation</code><span class="sig-paren">(</span><em class="sig-param">Xf</em>, <em class="sig-param">Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.innovation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.innovation" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute residual or innovation vector
 Innovation for phases is not informative. After a few steps,
 reflects noise of data around model.</p>
@@ -310,16 +310,13 @@ subplots of size len(ax)</p>
 
 <dl class="method">
 <dt id="kf.KF_class.Kalman.reduce_sizes_m_P">
-<code class="sig-name descname">reduce_sizes_m_P</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">t_sep=12</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.reduce_sizes_m_P"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.reduce_sizes_m_P" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove phases in m if not used to build interferograms and has converged</p>
+<code class="sig-name descname">reduce_sizes_m_P</code><span class="sig-paren">(</span><em class="sig-param">k</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.reduce_sizes_m_P"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.reduce_sizes_m_P" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove phases in m if not used to build interferograms and has converged
+For ulterior long baseline interferograms, phase and associated standard deviation 
+can be recovered but state Covariance terms are lost (too heavy to store)</p>
 <ul class="simple">
 <li><dl class="simple">
 <dt>k<span class="classifier">integer </span></dt><dd><p>number of iteration</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>t_sep<span class="classifier">integer</span></dt><dd><p>max time separation allowed to build interferograms</p>
 </dd>
 </dl>
 </li>
@@ -394,7 +391,7 @@ element of the model will be kept (in the order given in the model vector)</p>
 
 <dl class="method">
 <dt id="kf.KF_class.Kalman.write_output">
-<code class="sig-name descname">write_output</code><span class="sig-paren">(</span><em class="sig-param">outstates</em>, <em class="sig-param">outphase</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.write_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.write_output" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">write_output</code><span class="sig-paren">(</span><em class="sig-param">outstates</em>, <em class="sig-param">outphase</em>, <em class="sig-param">outupdate=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.write_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.write_output" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save outputs of kalman filter for next run</p>
 <ul class="simple">
 <li><dl class="simple">
@@ -404,6 +401,11 @@ element of the model will be kept (in the order given in the model vector)</p>
 </li>
 <li><dl class="simple">
 <dt>outphase<span class="classifier">h5py file</span></dt><dd><p>Open h5file for phase storage</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>outupdate<span class="classifier">h5py file</span></dt><dd><p>Open h5file for gain and innovation (Optional)</p>
 </dd>
 </dl>
 </li>

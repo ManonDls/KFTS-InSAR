@@ -95,9 +95,9 @@
         <span class="k">else</span> <span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">spatial_grid</span><span class="p">(</span><span class="n">xmin</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">x1</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">x2</span><span class="p">,</span> 
                         <span class="n">ymin</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">y1</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">y2</span><span class="p">,</span> <span class="n">truncate</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
-            
-        <span class="bp">self</span><span class="o">.</span><span class="n">dividepxls</span><span class="p">(</span><span class="n">mpi</span><span class="p">,</span><span class="n">mpiarg</span><span class="p">)</span>
         
+        <span class="bp">self</span><span class="o">.</span><span class="n">dividepxls</span><span class="p">(</span><span class="n">mpi</span><span class="p">,</span><span class="n">mpiarg</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">time</span>        <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;tims&#39;</span><span class="p">][:]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">links</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;Jmat&#39;</span><span class="p">][:]</span>                              <span class="c1">#2D (interf,time)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;bperp&#39;</span><span class="p">][:]</span>                             <span class="c1">#perpendicular baseline (interf)</span>
@@ -106,7 +106,8 @@
         <span class="k">if</span> <span class="n">subregion</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
             <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>   <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">][:,</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span><span class="p">,:]</span>     <span class="c1">#3D (interf,y,x)</span>
         <span class="k">else</span> <span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>   <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">][:,</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span><span class="p">,</span><span class="n">subregion</span><span class="o">.</span><span class="n">x1</span><span class="p">:</span><span class="n">subregion</span><span class="o">.</span><span class="n">x2</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>   <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">][:,</span><span class="n">subregion</span><span class="o">.</span><span class="n">y1</span><span class="p">:</span><span class="n">subregion</span><span class="o">.</span><span class="n">y2</span><span class="p">,</span>
+                                            <span class="n">subregion</span><span class="o">.</span><span class="n">x1</span><span class="p">:</span><span class="n">subregion</span><span class="o">.</span><span class="n">x2</span><span class="p">]</span>
         
         <span class="c1">#Ordinal date to decimal year</span>
         <span class="n">init</span>      <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromordinal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orddates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -150,8 +151,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span> <span class="o">=</span> <span class="n">maxy</span> <span class="o">-</span><span class="n">miny</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span> <span class="o">=</span> <span class="n">miny</span><span class="p">,</span><span class="n">maxy</span>
             
-            <span class="c1">#if self.verbose:</span>
-            <span class="c1">#    print(&#39;Worker {} working on {} to {}&#39;.format(self.rank, miny, maxy))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Worker </span><span class="si">{}</span><span class="s1"> working on </span><span class="si">{}</span><span class="s1"> to </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="n">miny</span><span class="p">,</span> <span class="n">maxy</span><span class="p">))</span>
             
         <span class="k">else</span> <span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mpi</span> <span class="o">=</span> <span class="kc">False</span>
@@ -208,7 +209,7 @@
         
 <div class="viewcode-block" id="SetupKF.pxl_with_nodata"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.pxl_with_nodata">[docs]</a>    <span class="k">def</span> <span class="nf">pxl_with_nodata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">thres</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Check for pixels with little and build mask.</span>
+<span class="sd">        Check for pixels with little data and build mask.</span>
 <span class="sd">            :xv,yv: grid element </span>
 <span class="sd">        Opts:</span>
 <span class="sd">            :thres:  minimum number of interferogram required to be available for one pixel</span>
@@ -349,7 +350,7 @@
         
 
 <div class="viewcode-block" id="initiatefileforKF"><a class="viewcode-back" href="../../fmt.html#kf.readinput.initiatefileforKF">[docs]</a><span class="k">def</span> <span class="nf">initiatefileforKF</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="n">phasefile</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> 
-                           <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">toverlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+                           <span class="n">updtfile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">toverlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Open h5py file for kalman filter.</span>
 <span class="sd">        :statefile: file name and location </span>
@@ -357,6 +358,7 @@
 <span class="sd">        :L:         number of parameters </span>
 <span class="sd">        :model:     model description in tuple used for timefunction.py</span>
 <span class="sd">        :store:     is a tuple of things to store</span>
+<span class="sd">        :updtfile:  file name to store additional statistics about KF analysis</span>
 <span class="sd">        :comm:      communicator if MPI used (e.g. MPI.COMM_WORLD)</span>
 <span class="sd">        :toverlap:  number of overlaping timesteps with past solution (only if restart KF)</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -368,10 +370,14 @@
     <span class="k">if</span> <span class="n">comm</span><span class="o">==</span><span class="kc">False</span> <span class="p">:</span>
         <span class="n">fstates</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
         <span class="n">fphases</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">phasefile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">updtfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fupdt</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">updtfile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
     <span class="k">else</span> <span class="p">:</span> 
         <span class="n">fstates</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
         <span class="n">fphases</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">phasefile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
-    
+        <span class="k">if</span> <span class="n">updtfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fupdt</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">updtfile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="n">t_sep</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">tsep</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">max_tsep</span>
     <span class="k">else</span><span class="p">:</span>
@@ -416,7 +422,19 @@
     <span class="n">idx</span> <span class="o">=</span> <span class="n">fphases</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;idx0&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">idx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Index of first phase in file with respect to first reference date of time series&#39;</span>
     
-    <span class="k">return</span> <span class="n">fstates</span><span class="p">,</span><span class="n">fphases</span></div>
+    <span class="c1"># Save part of the innovation and Gain to have information </span>
+    <span class="c1"># about the predictive power of the model </span>
+    <span class="n">innv</span> <span class="o">=</span> <span class="n">fupdt</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;mean_innov&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">lent</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    <span class="n">innv</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Mean innovation (or residual) for the last phase estimate at each time step&#39;</span>
+
+    <span class="c1"># about the convergence and sensitivity to data of model parameters</span>
+    <span class="n">gain</span> <span class="o">=</span> <span class="n">fupdt</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;param_gain&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">lent</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">L</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    <span class="n">gain</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Norm of the gain for the L model parameters at each time step&#39;</span>
+
+    <span class="k">if</span> <span class="n">updtfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">fstates</span><span class="p">,</span><span class="n">fphases</span><span class="p">,</span><span class="n">fupdt</span>
+    <span class="k">else</span> <span class="p">:</span>
+        <span class="k">return</span> <span class="n">fstates</span><span class="p">,</span><span class="n">fphases</span></div>
 
 
 <div class="viewcode-block" id="reopenfileforKF"><a class="viewcode-back" href="../../fmt.html#kf.readinput.reopenfileforKF">[docs]</a><span class="k">def</span> <span class="nf">reopenfileforKF</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="n">phasefile</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>

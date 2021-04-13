@@ -73,7 +73,8 @@ class SetupKF(object):
         if subregion is None: 
             self.igram   = fin[intrfname][:,self.miny:self.maxy,:]     #3D (interf,y,x)
         else :
-            self.igram   = fin[intrfname][:,self.miny:self.maxy,subregion.x1:subregion.x2]
+            self.igram   = fin[intrfname][:,subregion.y1:subregion.y2,
+                                            subregion.x1:subregion.x2]
         
         #Ordinal date to decimal year
         init      = dt.datetime.fromordinal(self.orddates[0])
@@ -117,8 +118,8 @@ class SetupKF(object):
             self.Ny = maxy -miny
             self.miny,self.maxy = miny,maxy
             
-            #if self.verbose:
-            #    print('Worker {} working on {} to {}'.format(self.rank, miny, maxy))
+            if self.verbose:
+                print('Worker {} working on {} to {}'.format(self.rank, miny, maxy))
             
         else :
             self.mpi = False

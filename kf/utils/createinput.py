@@ -158,7 +158,7 @@ class SynteticKF(object):
         #self.links[:,0] = 0 
         
         self.pair = np.array(self.pair)
-        self.build_R(rr,fmt)
+        self.build_R(rr,fmt)   
         
         # Build interferograms
         if self.phase.ndim == 1 :

@@ -183,26 +183,47 @@ class Kalman(object):
         * indx : integer
                 indexes (with respect to t0) of phases in self.m[L:]
         '''
-        
-        
-        #find interferograms for time k
+         
+        # last_column is 1 when youngest-oldest or -1 when oldest-youngest
         last_column = self.link[:,-1][np.nonzero(self.link[:,-1])][-1]
-        if  last_column == 1 :   #when youngest-oldest 
-            ind_interf = np.array([i for i,hh in enumerate(self.link[:,k]) if hh==1.])
-        elif last_column == -1 :  #when oldest-youngest
-            ind_interf = np.array([i for i,hh in enumerate(self.link[:,k]) if hh== -1.])
-        else :
-            raise ValueError('Cannot determine if links in H are youngest-oldest or oldest-youngest')
+        
+        # find interferograms for time k (line of links) involving past dates only !
+        ind_interf = np.array([i for i,hh in enumerate(self.link[:,k]) if hh== last_column])
         
         #check for NaN in D[ind_interf]
         if len(ind_interf)> 0 : 
             mask_nan  = np.isnan(self.data[ind_interf])
             ind_interf = ind_interf[np.invert(mask_nan)]
-        else :
-            ind_interf = []
+        
+        if len(ind_interf)> 0 :
             
-        #select relevant D and R
-        if len(ind_interf)>0 :
+            #find phase substracted to phase k (column of links)
+            ind_phases = np.array([i for i in np.where(self.link[ind_interf,:]==abs(1))[1] if i!=k])
+
+            #If phase involved in interferogram not in state (m) anymore
+            condition = [i not in indxs for i in ind_phases]
+            if any(condition):  
+                ind_old,im = ind_phases[condition],np.where(condition)[0]
+            
+                #expand m and P from phase 
+                self.m = np.concatenate((self.m[:self.L],self.phases[ind_old],self.m[self.L:]))
+            
+                for i in range(len(ind_old)):
+                    var = np.square(self.std[ind_old[i]])
+                    row = np.zeros(np.shape(self.P)[0])
+                    col = np.zeros(np.shape(self.P)[0]+1)
+                
+                    #No covariance terms in P gives better results, but approximation
+                    col[self.L] = var
+
+                    self.P = np.insert(self.P,self.L+i,row,axis=0)
+                    self.P = np.insert(self.P,self.L+i,col,axis=1)
+            
+                #notify new
+                indxs = np.concatenate((ind_old,indxs)) #with respect to idx0
+                self.m_indxs = np.concatenate((ind_old +self.idx0,self.m_indxs))
+        
+            #select relevant D and R
             self.D = self.data[ind_interf]
             self.R = self.Rdat[ind_interf,:][:,ind_interf]
             Hsub = self.link[ind_interf,:k+1]
@@ -215,6 +236,7 @@ class Kalman(object):
             self.D = []
             self.R = []
             self.H = []
+
 
     def predict(self,X, P, A, Q):
         '''
@@ -302,35 +324,50 @@ class Kalman(object):
             print(res)
 
     
-    def reduce_sizes_m_P(self, k, t_sep=12):
+    def reduce_sizes_m_P(self, k ):
         '''
         Remove phases in m if not used to build interferograms and has converged
-        
+        For ulterior long baseline interferograms, phase and associated standard deviation 
+        can be recovered but state Covariance terms are lost (too heavy to store)
+
         * k : integer 
                 number of iteration 
-        * t_sep : integer
-                max time separation allowed to build interferograms
         '''
+
+        t_sep = self.t_sep #number of time step to keep in state vector 
+
         if k >= t_sep :
             L = self.L   #number of parameters
             
             # apply to phases not in current interferograms (t > t_sep)
-            sub_P     = np.diag(self.P[L:-(t_sep),L:-(t_sep)])
-            sub_m     = self.m[L:-(t_sep)] 
+            sub_P   = np.diag(self.P[L:-(t_sep),L:-(t_sep)])
+            sub_m   = self.m[L:-(t_sep)] 
+            indx    = self.m_indxs[:-(t_sep)]
+           
+            #Look at where to insert old phases    
+            relativind = indx -(len(self.phases)+self.idx0)
+            ind_mod,im = indx[relativind<0],np.where(relativind<0)[0]
+            ia = np.where(relativind>=0)[0]
             
-            self.phases  = np.append(self.phases,sub_m)
-            self.std     = np.append(self.std,abs(sub_P)**(old_div(1,2.)))  #sqrt of variance        
-            self.m_indxs = self.m_indxs[-t_sep:]
+            if len(im)>0:
+                #phase already stored need to be updated
+                self.phases[ind_mod-self.idx0] = sub_m[im]
+                self.std[ind_mod-self.idx0] = abs(sub_P[im])**(1/2.)
+
+            #Append phases
+            self.phases  = np.append(self.phases,sub_m[ia])
+            self.std     = np.append(self.std,abs(sub_P[ia])**(1/2.))  #sqrt of variance        
             
+            #Cut state 
             self.P = np.delete(self.P,list(range(L,len(self.m)-t_sep)),0) #row
             self.P = np.delete(self.P,list(range(L,len(self.m)-t_sep)),1) #column
-            
             self.m = np.concatenate((self.m[:L],self.m[-t_sep:]))
-        
+            self.m_indxs = self.m_indxs[-t_sep:]
+
         assert np.shape(self.P)[0]==np.shape(self.P)[1],'ERROR: Pb in reshape, P not square matrix'
         assert np.shape(self.P)[0]==len(self.m),'ERROR: shape of m and P do not match'
         
-    
+
     def expend_m_P(self,L,n,PL):
         '''
         Open state vector and covariance (m and P) to add building parameters
@@ -446,6 +483,8 @@ class Kalman(object):
         kmod = 13        #int from which parameters can be added
         m_all = []       #store state vector at each k in list of lists
         
+        self.t_sep = t_sep #caution if large may be slow and heavy
+
         #Get where to start itterations
         assert len(self.m_indxs)<= len(self.t),'ERROR: more phases computed than dates to work on'
         assert len(self.m_indxs) < len(self.t),'ERROR: from array size, no NEW phase to compute'
@@ -465,7 +504,11 @@ class Kalman(object):
             
             self.m_indxs = np.append(self.m_indxs, self.idx0+k) #add last phase index 
             self.create_H_R_and_D(k, self.m_indxs-self.idx0)
-            
+           
+            #Update matrices
+            self.create_Q(m_err,phi_err,add_err,len(self.m))
+            self.A = self.modelobj.create_A(k-1,len(self.m))
+
             (mf,Pf) = self.predict(self.m, self.P, self.A, self.Q)
             (self.m,self.P) = self.update(mf, Pf)
             
@@ -473,9 +516,9 @@ class Kalman(object):
             Gain.append( np.linalg.norm(self.K[:self.L,:], axis=1) ) #Gain of model parameters
             Innov.extend( [np.mean(self.inov)] )
             
-            #Reduce size of m (part with phases)
-            if k >= t_sep:
-                self.reduce_sizes_m_P(k, t_sep=t_sep)
+            if (k%5==0) or (k_end-1): #every 5th k (to save time)
+                #Reduce size of m (part with phases)
+                self.reduce_sizes_m_P(k)
             
             #OPTION ONLY TESTED ON SYNTHETICS
             #Add building parameters based on observations
@@ -491,8 +534,8 @@ class Kalman(object):
                     self.expend_m_P(self.L-n,n,70.**2.) #L already increased in timefunction
 
                 #Update matrices
-                self.create_Q(m_err,phi_err,add_err,len(self.m))
-                self.A = self.modelobj.create_A(k,len(self.m))
+                #self.create_Q(m_err,phi_err,add_err,len(self.m))
+                #self.A = self.modelobj.create_A(k,len(self.m))
             
             #Plot
             if plots == True : 

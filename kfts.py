@@ -40,7 +40,6 @@ class RunKalmanFilter(object):
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
-        
 
     def setConfiguration(self, config):
         '''Read configuration file and convert to python objects.
@@ -76,7 +75,6 @@ class RunKalmanFilter(object):
 
         self.sig_a = literal_eval(secMS.get('sig_a'))
         self.sig_a = list(self.sig_a)
-        self.sig_eq = secMS.getfloat('sig_eq', fallback=30.)
         
         secKFS       = config['KALMAN FILTER SETUP']
         self.VERBOSE = secKFS.getboolean('VERBOSE', fallback = False)
@@ -152,7 +150,7 @@ class RunKalmanFilter(object):
             return Function
 
         # Get earthquake properties in actual reference frame
-        Xeq,Yeq,teq,Rinf,sx,sy = np.loadtxt(self.eqinfo, unpack=True)
+        Xeq,Yeq,teq,Rinf,Aeq,sx,sy = np.loadtxt(eqinfo, unpack=True)
         Xeq = Xeq.astype('int32')
         Yeq = Yeq.astype('int32')
         
@@ -161,8 +159,8 @@ class RunKalmanFilter(object):
             Leq = 1
             teq = [teq]
             Xeq,Yeq = [Xeq],[Yeq]
-            Rinf,sx,sy = [Rinf],np.array(sx),np.array(sy)
-        elif isinstance(teq,np.array):
+            Rinf,Aeq,sx,sy = [Rinf],[Aeq],np.array(sx),np.array(sy)
+        elif isinstance(teq,np.ndarray):
             teq = teq.tolist()
             Leq = len(teq)
         else:
@@ -180,7 +178,7 @@ class RunKalmanFilter(object):
         for i in range(Leq):
             width = Rinf[i]/(np.mean([np.mean(sx),np.mean(sy)]))
             fct   = twoD_Gauss(data.xv[data.miny:data.maxy,:], data.yv[data.miny:data.maxy,:],
-                            self.sig_eq**2, center=(Xeq[i],Yeq[i]), sig=width)
+                            Aeq[i]**2, center=(Xeq[i],Yeq[i]), sig=width)
             fct[fct < 1.] = 0.
             P0eq[:,:,i] = fct
 

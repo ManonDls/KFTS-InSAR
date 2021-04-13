@@ -60,7 +60,7 @@ def plot_covariance(fig,ax,m,P,L):
     else :
         print('State covariance (P) not 2D use plot_param_2D fct')
 
-def plot_param_2D(figname, m, L, xv, yv, bounds=None, axlim=None, cm=plt.get_cmap('viridis'), norm='linear', resol=250):
+def plot_param_2D(figname, m, L, xv, yv, bounds=None, names=None, axlim=None, cm=plt.get_cmap('viridis'), norm='linear', resol=250):
     ''' 
     Plot final parameters for each pixel on 2D maps
     * figname : string containing location and name of the output figure
@@ -68,23 +68,46 @@ def plot_param_2D(figname, m, L, xv, yv, bounds=None, axlim=None, cm=plt.get_cma
     * L       : number of parameters (will select the L first elements of m)
     * xv, yv  : spatial meshgrid for x and y tick label
     * bounds  : color map bounding values (list of pairs with length L)
+    * names   : specify name of parameters if known
     * norm    : colorbar normalization 'linear' 'log' or 'center'.
                 'center' is for a linear colormap with the midcolor of cm attributed to zero '''
     
-    Taillefigure = (np.shape(xv)[1]/300.*L+1,np.shape(xv)[0]/400.)
-    fig,ax = plt.subplots(1,L,figsize=Taillefigure,sharex=True,sharey=True) #(L*4,3.5)
+    if axlim is None:
+        aratio = (np.max(xv)-np.min(xv))/(np.max(yv)-np.min(yv))
+    else :
+        aratio = (axlim[1]-axlim[0])/(axlim[3]-axlim[2])
+    scale = 10
     
+    if L <6:
+        Taillefigure = (aratio*scale*L+1, 1/aratio*scale)
+        fig,ax = plt.subplots(1,L,figsize=Taillefigure,sharex=True,sharey=True) #(L*4,3.5)
+    else :
+        lcol = L//2+L%2
+        Taillefigure = (aratio*scale*lcol+1, 1/aratio*scale*1.8)
+        fig,ax = plt.subplots(2,lcol,figsize=Taillefigure,sharex=True,sharey=True)
+        ax = ax.ravel()
+
     if bounds == None:
         bounds = [[]]*L
         for i in range(L):
             if norm in ['linear','center']:
-                bounds[i] = [np.nanmean(m[:,:,i])-3*np.nanstd(m[:,:,i]),np.nanmean(m[:,:,i])+3*np.nanstd(m[:,:,i])]
+                bounds[i] = [np.nanpercentile(m[:,:,i],1,interpolation='higher'),\
+                                np.nanpercentile(m[:,:,i],99,interpolation='higher')]
             elif norm =='log':
                 bounds[i] = [np.nanmin(m[:,:,i]),np.nanmax(m[:,:,i])]
         print("bounds",bounds)
         
     #Plot retrieved parameters map
-    param_names = ['offset','velocity','sine amplitude','cos amplitude','step1','step2','step3','step4']
+    if names is not None :
+        param_names = names
+    else:
+        print("WARNING: use default parameter names but may be wrong")
+        param_names = ['offset','velocity','sine amplitude',
+                        'cos amplitude']
+        if L > 4 : 
+            for k in range(4,L):
+                param_names.append('step'+str(k))
+
     for i in range(L):
         if norm =='linear':
             img0 = ax[i].pcolormesh(xv,yv,m[:,:,i],vmin=bounds[i][0],vmax=bounds[i][1],cmap=cm)
@@ -94,7 +117,7 @@ def plot_param_2D(figname, m, L, xv, yv, bounds=None, axlim=None, cm=plt.get_cma
         elif norm == 'log':
             img0 = ax[i].pcolormesh(xv,yv,m[:,:,i],norm=colors.LogNorm(vmin=bounds[i][0],vmax=bounds[i][1]),cmap=cm)
             
-        cb = fig.colorbar(img0,ax=ax[i])
+        cb = fig.colorbar(img0,ax=ax[i],shrink=0.4,aspect=22)
         ax[i].set_title(param_names[i])
         if i == 1:
             cb.set_label('mm/yr')
@@ -131,9 +154,9 @@ def plot_TS(figname, time, rawts, err, pixel=None, model=[], params=[], label=[]
     #load class for model if arguments filled in
     if len(model)>0 and len(params)>0 :
         
-        import timefunction
+        from kf.timefunction import TimeFct
         print("initiate timefunction")
-        mod = timefunction.TimeFct(time,model)
+        mod = TimeFct(time,model)
         mod.check_model(verbose=False)
         if time[0] >0:
             params = mod.shift_t0(time[0],params)
@@ -422,15 +445,19 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
             igrams = igrams[:,y1:y2,x1:x2]
         elif time_ax==-1 or time_ax==2:
             igrams = igrams[y1:y2,x1:x2,:]
-    
+
     if bounds == None:
         print("Warning: Computing bounds of color scale, may be very long for big array")
         bounds = [np.nanmean(igrams)-2*np.nanstd(igrams),np.nanmean(igrams)+2*np.nanstd(igrams)]
         print("bounds",bounds)
     
+    #Get appropriate size for Figure
+    aratio = (np.max(lon)-np.min(lon))/(np.max(lat)-np.min(lat))
+    scale = 10
+    
     for i in interf_list:
         print("Interferogram",i)
-        fig = plt.figure(figsize=(8.5,8)) #(4,6))    
+        fig = plt.figure(figsize=(aratio*scale,1/aratio*scale))   
         
         if time_ax==0:
             plt.pcolormesh(lon, lat, igrams[i,:,:],vmin=bounds[0],vmax=bounds[1],cmap=cm)
@@ -453,9 +480,9 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
         plt.tight_layout()
         
         if labels is None:
-            fig.savefig(figfile +'interfero_' +str(i) +'.png', dpi=250)
+            fig.savefig(figfile +'interfero_' +str(i) +'.png', dpi=100)
         else:
-            fig.savefig(figfile +'interfero_'+labels[i] +'.png', dpi=250)
+            fig.savefig(figfile +'interfero_'+labels[i] +'.png', dpi=100)
         
         plt.close('all')
 

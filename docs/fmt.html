@@ -101,7 +101,7 @@
 <dt id="kf.readinput.SetupKF.pxl_with_nodata">
 <code class="sig-name descname">pxl_with_nodata</code><span class="sig-paren">(</span><em class="sig-param">thres=30</em>, <em class="sig-param">chunks=200</em>, <em class="sig-param">plot=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.pxl_with_nodata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.pxl_with_nodata" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
-<dt>Check for pixels with little and build mask.</dt><dd><dl class="field-list simple">
+<dt>Check for pixels with little data and build mask.</dt><dd><dl class="field-list simple">
 <dt class="field-odd">xv,yv</dt>
 <dd class="field-odd"><p>grid element</p>
 </dd>
@@ -197,7 +197,7 @@ default are all pixels (0,Nx,0,Ny)</p>
 <span id="create-or-open-storage-file"></span><h2><span class="section-number">5.2. </span>Create or open storage file<a class="headerlink" href="#module-kf.readinput" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="kf.readinput.initiatefileforKF">
-<code class="sig-prename descclassname">kf.readinput.</code><code class="sig-name descname">initiatefileforKF</code><span class="sig-paren">(</span><em class="sig-param">statefile</em>, <em class="sig-param">phasefile</em>, <em class="sig-param">L</em>, <em class="sig-param">data</em>, <em class="sig-param">model</em>, <em class="sig-param">store</em>, <em class="sig-param">comm=False</em>, <em class="sig-param">toverlap=0</em>, <em class="sig-param">t_sep=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#initiatefileforKF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.initiatefileforKF" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">kf.readinput.</code><code class="sig-name descname">initiatefileforKF</code><span class="sig-paren">(</span><em class="sig-param">statefile</em>, <em class="sig-param">phasefile</em>, <em class="sig-param">L</em>, <em class="sig-param">data</em>, <em class="sig-param">model</em>, <em class="sig-param">store</em>, <em class="sig-param">updtfile=None</em>, <em class="sig-param">comm=False</em>, <em class="sig-param">toverlap=0</em>, <em class="sig-param">t_sep=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#initiatefileforKF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.initiatefileforKF" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Open h5py file for kalman filter.</dt><dd><dl class="field-list simple">
 <dt class="field-odd">statefile</dt>
@@ -215,11 +215,14 @@ default are all pixels (0,Nx,0,Ny)</p>
 <dt class="field-odd">store</dt>
 <dd class="field-odd"><p>is a tuple of things to store</p>
 </dd>
-<dt class="field-even">comm</dt>
-<dd class="field-even"><p>communicator if MPI used (e.g. MPI.COMM_WORLD)</p>
+<dt class="field-even">updtfile</dt>
+<dd class="field-even"><p>file name to store additional statistics about KF analysis</p>
 </dd>
-<dt class="field-odd">toverlap</dt>
-<dd class="field-odd"><p>number of overlaping timesteps with past solution (only if restart KF)</p>
+<dt class="field-odd">comm</dt>
+<dd class="field-odd"><p>communicator if MPI used (e.g. MPI.COMM_WORLD)</p>
+</dd>
+<dt class="field-even">toverlap</dt>
+<dd class="field-even"><p>number of overlaping timesteps with past solution (only if restart KF)</p>
 </dd>
 </dl>
 </dd>
