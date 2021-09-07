@@ -33,7 +33,7 @@ class SetupKF(object):
                 - dates : absolute data
                 - igram : interferograms
                 - links : connection between phases to build interfero (M x N), 0 1 and -1
-                - bperp : perpendicular baseline between aquisitions
+                - bperp : perpendicular baseline between aquisitions (not exploited yet)
         Opts:
             :fmt:    format of H5file input, default is 'ISCE'
             :mpi:    do you use parallel features of mpi4py (True or False, default False)

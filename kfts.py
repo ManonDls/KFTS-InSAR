@@ -136,7 +136,7 @@ class RunKalmanFilter(object):
         
         return data
 
-    def earthquakeIntegration(self):
+    def earthquakeIntegration(self,data):
         ''' Add step function to the functional model of deformation
         to model coseismic displacement due to earthquakes.
         Require a file containing earthquake properties in the track
@@ -150,7 +150,7 @@ class RunKalmanFilter(object):
             return Function
 
         # Get earthquake properties in actual reference frame
-        Xeq,Yeq,teq,Rinf,Aeq,sx,sy = np.loadtxt(eqinfo, unpack=True)
+        Xeq,Yeq,teq,Rinf,Aeq,sx,sy = np.loadtxt(self.eqinfo, unpack=True)
         Xeq = Xeq.astype('int32')
         Yeq = Yeq.astype('int32')
         
@@ -164,7 +164,7 @@ class RunKalmanFilter(object):
             teq = teq.tolist()
             Leq = len(teq)
         else:
-            assert False, "Verify content of {}".format(eqinfo)
+            assert False, "Verify content of {}".format(self.eqinfo)
         
         teq.insert(0,'STEP')
         self.model.insert(len(self.model),tuple(teq))
@@ -181,6 +181,9 @@ class RunKalmanFilter(object):
                             Aeq[i]**2, center=(Xeq[i],Yeq[i]), sig=width)
             fct[fct < 1.] = 0.
             P0eq[:,:,i] = fct
+
+        return Leq,P0eq
+
 
     def initCovariances(self, L):
         '''Create arrays for the initial state Covariance matrix (P0)
@@ -222,7 +225,7 @@ class RunKalmanFilter(object):
         
         # Add earthquake to model
         if self.EQ == True:
-            self.earthquakeIntegration()
+            Leq,P0eq = self.earthquakeIntegration(data)
         
         # Start class dealing with the functional model
         tfct = TimeFct(data.time,self.model)
@@ -254,6 +257,9 @@ class RunKalmanFilter(object):
         m0 = np.zeros(L)
         P0 = P_par*np.eye(L+1)
         
+        #bound t_sep to save memory 
+        #data.max_tsep = np.min([data.max_tsep,10])
+
         toverl = 0
         if self.UPDT == True:
             # Import common things to all pixels to gain time 
@@ -281,7 +287,7 @@ class RunKalmanFilter(object):
         fstates, fphases, fupdate = infmt.initiatefileforKF(
                     self.outdir + 'States.h5', self.outdir + 'Phases.h5',
                     L, data, self.model, (m_err,self.sig_i,self.sig_y),
-                    updtfile=outdir + 'Updates.h5', comm = self.comm, toverlap = toverl)
+                    updtfile= self.outdir + 'Updates.h5', comm = self.comm, toverlap = toverl)
 
         if self.isTraceOn():
             print('-- START Kalman Filter --')

@@ -183,31 +183,34 @@ class Kalman(object):
         * indx : integer
                 indexes (with respect to t0) of phases in self.m[L:]
         '''
-         
-        # last_column is 1 when youngest-oldest or -1 when oldest-youngest
-        last_column = self.link[:,-1][np.nonzero(self.link[:,-1])][-1]
         
-        # find interferograms for time k (line of links) involving past dates only !
-        ind_interf = np.array([i for i,hh in enumerate(self.link[:,k]) if hh== last_column])
         
-        #check for NaN in D[ind_interf]
+        # find interferogram for time k (line of links) involving past and present dates
+        ind_interf = np.array([i for i,hh in enumerate(self.link[:,k]) if abs(hh)==1])
+        
+        
         if len(ind_interf)> 0 : 
-            mask_nan  = np.isnan(self.data[ind_interf])
-            ind_interf = ind_interf[np.invert(mask_nan)]
+            # check that interferogram does not involve future dates
+            ind_interf = np.array([i for i in ind_interf if np.sum(self.link[i,k+1:])==0 ])
+
+            # check for NaN in D[ind_interf]
+            if len(ind_interf)> 0 :
+                mask_nan  = np.isnan(self.data[ind_interf])
+                ind_interf = ind_interf[np.invert(mask_nan)]
         
         if len(ind_interf)> 0 :
             
             #find phase substracted to phase k (column of links)
             ind_phases = np.array([i for i in np.where(self.link[ind_interf,:]==abs(1))[1] if i!=k])
-
+            
             #If phase involved in interferogram not in state (m) anymore
             condition = [i not in indxs for i in ind_phases]
             if any(condition):  
                 ind_old,im = ind_phases[condition],np.where(condition)[0]
-            
+                
                 #expand m and P from phase 
                 self.m = np.concatenate((self.m[:self.L],self.phases[ind_old],self.m[self.L:]))
-            
+                           
                 for i in range(len(ind_old)):
                     var = np.square(self.std[ind_old[i]])
                     row = np.zeros(np.shape(self.P)[0])

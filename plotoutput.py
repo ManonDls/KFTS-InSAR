@@ -134,9 +134,8 @@ if args.volc is not None :
 lon = np.fromfile(lon, dtype=np.float32)
 lat = np.fromfile(lat, dtype=np.float32)
 
-print('longitude',np.shape(lon),lon)
-print('latitude',np.shape(lat),lat)
-
+#print('longitude',np.shape(lon),lon)
+#print('latitude',np.shape(lat),lat)
    
 print("Import and read Kalman outputs")
 fin = h5py.File(inparm,'r')         
@@ -226,10 +225,10 @@ if RMS:
 parms[parms ==0.0] = np.nan 
 errors[errors==0.0] = np.nan
 
-# Mask point with error > mean +/- 2*std
-mask2 = derr > 2*np.nanstd(derr)
-derr[mask2] = np.nan
-disp[mask2] = np.nan
+## Mask point with error > mean +/- 2*std
+#mask2 = derr > 2*np.nanstd(derr)
+#derr[mask2] = np.nan
+#disp[mask2] = np.nan
 
 for i in range(L):
     mask3 = abs(errors[:,:,i]-np.nanmean(errors[:,:,i])) > 2*np.nanstd(errors[:,:,i])

@@ -134,7 +134,7 @@ else:
 
         #compute RMS
         ofil['rms'][x,:] = np.sqrt(np.nansum((data.igram[:,x,:] - igram_comp[:,x,:])**2,axis=0)/N)
-        #ofil['res'][:,x,:] = np.abs(igram.value - igram_comp.value)
+        #ofil['res'][:,x,:] = np.abs(igram[:] - igram_comp[:])
     
     #-------------------------------------------
     print("\n** Start plots **")
@@ -149,14 +149,14 @@ else:
 #plot RMS and estimated error
 fig1,ax1 = plt.subplots(1,2,figsize=(11,7.5),sharex=True,sharey=True)
 
-img0 = ax1[0].imshow(rms.value,vmin=np.nanpercentile(rms.value,2),vmax=np.nanpercentile(rms.value,98))#,norm=LogNorm(vmin=0.001,vmax=50))
+img0 = ax1[0].imshow(rms[:],vmin=np.nanpercentile(rms[:],2),vmax=np.nanpercentile(rms[:],98))#,norm=LogNorm(vmin=0.001,vmax=50))
 img1 = ax1[1].imshow(mnpstd,norm=LogNorm(vmin=0.001,vmax=50))
 
 plt.colorbar(img0,ax=ax1[0],shrink=0.6,aspect=15,orientation='horizontal')
 plt.colorbar(img1,ax=ax1[1],shrink=0.6,aspect=15,orientation='horizontal')
 
 ax1[0].set_title("RMS in interferogram\n reconstruction max= {}".format(
-                                                round(np.nanmax(rms.value))))
+                                                round(np.nanmax(rms[:]))))
 ax1[1].set_title("Mean standard deviation\n of phases max= {}".format(
                                                 round(np.nanmax(mnpstd)))) 
 
