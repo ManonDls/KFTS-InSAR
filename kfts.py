@@ -8,6 +8,7 @@ import os
 import sys  
 import h5py
 import time as TIME 
+import random
 
 # Local stuff
 import kf
@@ -260,7 +261,7 @@ class RunKalmanFilter(object):
         #bound t_sep to save memory 
         #data.max_tsep = np.min([data.max_tsep,10])
 
-        toverl = 0
+        toverl = 1
         if self.UPDT == True:
             # Import common things to all pixels to gain time 
             finstate  = h5py.File(self.instate,'r')
@@ -269,25 +270,34 @@ class RunKalmanFilter(object):
             
             # Identify new dates with respect to former state
             newdate = [t for t in data.time if t not in statetime]
-            
+
             # Check consistency 
             assert (len(newdate)  > 0), "No supplementary date in file {} wrt existing {}".format(infile,instate)
             assert (statetime[0] <= data.time[0]), "New data involves timesteps older than what was retained in the former state"
             
             # Set number of phases to keep for latter update
             data.max_tsep = np.max([data.max_tsep,len(statetime)])
-            toverl = len(statetime) - len(data.time) + len(newdate)
-            
+            toverl = len(indxs) #part of the time space with no new phase estimates (updates only)
+             
             if self.isTraceOn():
                 print('Data contains {} new time steps'.format(len(newdate)))
 
         if self.isTraceOn():
             print('-- Open H5 file for storage --')
+        
+        if os.path.exists(self.outdir + 'States.h5'):
+            sufx='{}'.format(random.randint(0,9))
+            if self.isTraceOn():
+                print('WARNING: {}States.h5 already exists, create States{}.h5'.format(self.outdir,sufx))
+        else:
+            sufx=''
 
         fstates, fphases, fupdate = infmt.initiatefileforKF(
-                    self.outdir + 'States.h5', self.outdir + 'Phases.h5',
+                    self.outdir + 'States{}.h5'.format(sufx), 
+                    self.outdir + 'Phases{}.h5'.format(sufx),
                     L, data, self.model, (m_err,self.sig_i,self.sig_y),
-                    updtfile= self.outdir + 'Updates.h5', comm = self.comm, toverlap = toverl)
+                    updtfile= self.outdir + 'Updates{}.h5'.format(sufx), 
+                    comm = self.comm, toverlap = toverl)
 
         if self.isTraceOn():
             print('-- START Kalman Filter --')

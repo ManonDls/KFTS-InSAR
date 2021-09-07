@@ -598,7 +598,7 @@ class Kalman(object):
         outphase['rawts'][j,i,:]        = self.phases
         outphase['rawts_std'][j,i,:]    = self.std
         
-        #Store Gain and Innovation 
+        #Store Gain and Innovation
         outupdate["mean_innov"][j,i,:] = self.Innov
         outupdate["param_gain"][j,i,:,:] = self.Gain
 

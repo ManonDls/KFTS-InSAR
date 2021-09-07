@@ -19,3 +19,18 @@ Install `kf` on your system using :
 ```
 python -m pip install dist/KFTS_InSAR-0.1-py3-none-any.whl
 ```
+
+### Easy test
+
+A sample dataset (set of unwrapped interferograms) is provided in  `testdata/`
+To run KFTS on this dataset : 
+```
+python kfts.py -c configs/config_Etna.ini 
+```
+
+To quickly visualize outputs and plot metrics :
+```
+python kf2rms.py -c configs/config_Etna.ini 
+python checkinnov.py -c configs/config_Etna.ini 
+python plotoutput.py -c configs/config_Etna.ini  -geom ./ -rmsTh 2
+```

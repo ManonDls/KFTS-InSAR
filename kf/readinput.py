@@ -330,7 +330,7 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
         :toverlap:  number of overlaping timesteps with past solution (only if restart KF)
     '''
         
-    lent = data.time.shape[0] +toverlap
+    lent = data.time.shape[0]
     Ny, Nx = data.Ntot, data.Nx
     m_err, sig_eps, sig_gam  = store
     
@@ -389,17 +389,18 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
     idx = fphases.create_dataset('idx0',data=0)
     idx.attrs['help'] = 'Index of first phase in file with respect to first reference date of time series'
     
-    # Save part of the innovation and Gain to have information 
-    # about the predictive power of the model 
-    innv = fupdt.create_dataset('mean_innov',(Ny,Nx,lent-1),'f')
-    innv.attrs['help'] = 'Mean innovation (or residual) for the last phase estimate at each time step'
-
-    # about the convergence and sensitivity to data of model parameters
-    gain = fupdt.create_dataset('param_gain',(Ny,Nx,lent-1,L),'f')
-    gain.attrs['help'] = 'Norm of the gain for the L model parameters at each time step'
-
     if updtfile is not None:
+        # Save part of the innovation and Gain to have information 
+        # about the predictive power of the model 
+        innv = fupdt.create_dataset('mean_innov',(Ny,Nx,lent-toverlap),'f')
+        innv.attrs['help'] = 'Mean innovation (or residual) for the last phase estimate at each time step'
+
+        # about the convergence and sensitivity to data of model parameters
+        gain = fupdt.create_dataset('param_gain',(Ny,Nx,lent-toverlap,L),'f')
+        gain.attrs['help'] = 'Norm of the gain for the L model parameters at each time step'
+
         return fstates,fphases,fupdt
+    
     else :
         return fstates,fphases
 
