@@ -13,6 +13,8 @@ https://manondls.github.io/KFTS-InSAR/
 ### Assumptions
 
 + Assuming python 3 is installed on your system.
++ H5py installed with gcc8 and openmpi variants for multiprocessing (py36-h5py @2.10.0_1+gcc8+openmpi)
++ Numpy installed with gcc8 and openblas variants for multiprocessing (py36-numpy @1.18.1_0+gcc8+openblas)
 
 Install `kf` on your system using : 
 
