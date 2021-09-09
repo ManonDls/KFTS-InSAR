@@ -41,6 +41,10 @@ class RunKalmanFilter(object):
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
+        if self.size == 1:
+            #disable MPI
+            self.comm = False
+
 
     def setConfiguration(self, config):
         '''Read configuration file and convert to python objects.
@@ -113,7 +117,7 @@ class RunKalmanFilter(object):
         # Read data file
         data = infmt.SetupKF(
             self.infile, 
-            mpi = True, 
+            mpi = self.comm, 
             mpiarg = (self.rank,self.size), 
             fmt = self.fmtfile, 
             verbose = self.VERBOSE,
@@ -291,7 +295,7 @@ class RunKalmanFilter(object):
                 print('WARNING: {}States.h5 already exists, create States{}.h5'.format(self.outdir,sufx))
         else:
             sufx=''
-
+        
         fstates, fphases, fupdate = infmt.initiatefileforKF(
                     self.outdir + 'States{}.h5'.format(sufx), 
                     self.outdir + 'Phases{}.h5'.format(sufx),
