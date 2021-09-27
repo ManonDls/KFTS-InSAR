@@ -37,20 +37,22 @@ config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolat
 config.read(args.config)
 
 loc     = config['INPUT'].get('workdir', fallback='./')
-outdir  = loc + config['OUTPUT'].get('outdir', fallback='')
-locfig  = loc + config['OUTPUT'].get('figdir', fallback='')
-datfile = loc + config['INPUT'].get('infile')
+outdir  = os.path.join(loc, config['OUTPUT'].get('outdir', fallback=''))
+locfig  = os.path.join(loc, config['OUTPUT'].get('figdir', fallback=''))
+datfile = os.path.join(loc, config['INPUT'].get('infile'))
 fmtfile = config['INPUT'].get('fmtfile', fallback='ISCE')
 
 model   = literal_eval(config['MODEL SETUP'].get('model'))
 EQ      = config['MODEL SETUP'].getboolean('EQ', fallback=False)
 eqinfo  = config['INPUT'].get('eqinfo', fallback=None)
+if eqinfo is not None:
+    eqinfo =  os.path.join(loc,eqinfo)
 
 # Adjust model in the case of earthquakes
 if EQ == True:
     #Get earthquake properties in actual reference frame
     #file obtained by running "earthquake2step.py"
-    Xeq,Yeq,teq,Rinf,sx,sy = np.loadtxt(eqinfo, unpack=True)
+    Xeq,Yeq,teq,Rinf,Aeq,sx,sy = np.loadtxt(eqinfo, unpack=True)
     Xeq = Xeq.astype('int32')
     Yeq = Yeq.astype('int32')
 
@@ -144,7 +146,7 @@ for k in range(L):
         ax1[k].plot(dates[1:],toplot,'.')
     ax1[k].set_title(labels[k])
     ax1[k].set_xlabel('Time')
-    print("labels are", ax1[k].xaxis.get_majorticklabels())
+    #print("labels are", ax1[k].xaxis.get_majorticklabels())
     plt.setp( ax1[k].xaxis.get_majorticklabels(), rotation=70 )
 
 ax1[0].set_ylabel('Gain')

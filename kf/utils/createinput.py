@@ -12,13 +12,15 @@ from builtins import str
 from builtins import range
 from builtins import object
 import numpy as np
+import h5py
+import datetime as dt
 
 #Local import
 from kf.timefunction import TimeFct
 from kf.utils.generateRnAtmo import generateAtmo
 
 class SynteticKF(object):
-    def __init__(self, time):
+    def __init__(self, time, startdate=0):
         ''' 
         Class to initialise synthetic InSAR data to use with the Kalman Filter. 
         It mirrors the functions of the class ``kf.readinput.SetupKF`` 
@@ -26,9 +28,13 @@ class SynteticKF(object):
             * time : array 
                     aquisitions times
         '''
-        self.time = time
-        self.date = time
-        self.orddates = time
+        self.time = time              #time in days
+        self.date = startdate +time/365. #decimal year
+        if startdate!=0:
+            if isinstance(startdate,float):
+                print("Warning: should use datetime obsject as start date")
+                startdate = dt.datetime(int(startdate),1,1) 
+            self.orddates = dt.datetime.toordinal(startdate) +time
         
         #useless parameter here, only to match MPI with real data
         self.rank = 0
@@ -162,7 +168,7 @@ class SynteticKF(object):
         
         # Build interferograms
         if self.phase.ndim == 1 :
-            interf= np.dot(self.links,self.phase) \
+            self.igram = np.dot(self.links,self.phase) \
                     + np.random.normal(0,sig_i,np.shape(self.links)[0])
         
         if self.phase.ndim == 3 : 
@@ -178,7 +184,7 @@ class SynteticKF(object):
             self.Nx,self.Ny,self.Ntot = nx, ny, ny
         
         #All done
-        return interf, self.R, self.links
+        return self.igram, self.R, self.links
         
     def build_R(self,rr,fmt):
         '''
@@ -258,3 +264,29 @@ def kdelta(i,j):
     else :
         return 0.0
     
+def writeh5input(synobj, filename='Syndata.h5'):
+    '''Write HDF5 file to be read by KFTS
+    synobj is an instance of SynteticKF'''
+    
+    finterf = h5py.File(filename, 'w')
+    finterf.create_dataset('Jmat', data= synobj.links)
+    finterf.create_dataset('bperp', data= synobj.bperp)
+    finterf.create_dataset('igram', data= synobj.igram)
+    
+    finterf.create_dataset('tims', data= synobj.time)
+    finterf.create_dataset('dates', data= synobj.orddates)
+    finterf.close()
+
+def writeh5timeseries(synobj, filename='Synphases.h5'):
+    
+    fin = h5py.File(filename, 'w')
+    fin.create_dataset('rawts', data= synobj.phase)
+    fin.create_dataset('refts', data= synobj.ref)
+    fin.create_dataset('tims', data= synobj.time)
+    fin.close()
+
+def writeh5model(mreal, filename='Synmodel.h5'):
+
+    fin = h5py.File(filename, 'w')
+    fin.create_dataset('modelstate', data= mreal)
+    fin.close()

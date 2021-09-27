@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import datetime as dt
 import h5py
+import os
 
 import configparser
 import argparse
@@ -61,14 +62,16 @@ config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolat
 config.read(args.config)
 
 loc     = config['INPUT'].get('workdir', fallback='./')
-outdir  = loc + config['OUTPUT'].get('outdir', fallback='')
-locfig  = loc + config['OUTPUT'].get('figdir', fallback='')
-datfile = loc + config['INPUT'].get('infile')
+outdir  = os.path.join(loc, config['OUTPUT'].get('outdir', fallback=''))
+locfig  = os.path.join(loc, config['OUTPUT'].get('figdir', fallback=''))
+datfile = os.path.join(loc, config['INPUT'].get('infile'))
 fmtfile = config['INPUT'].get('fmtfile', fallback='ISCE')
 
 model   = literal_eval(config['MODEL SETUP'].get('model'))
 EQ      = config['MODEL SETUP'].getboolean('EQ', fallback=False)
 eqinfo  = config['INPUT'].get('eqinfo', fallback=None)
+if eqinfo is not None:
+    eqinfo = os.path.join(loc, eqinfo)
 
 # Adjust model in the case of earthquakes
 if EQ == True:
@@ -230,10 +233,10 @@ errors[errors==0.0] = np.nan
 #derr[mask2] = np.nan
 #disp[mask2] = np.nan
 
-for i in range(L):
-    mask3 = abs(errors[:,:,i]-np.nanmean(errors[:,:,i])) > 2*np.nanstd(errors[:,:,i])
-    parms[:,:,i][mask3] = np.nan
-    errors[:,:,i][mask3] = np.nan
+#for i in range(L):
+    #mask3 = abs(errors[:,:,i]-np.nanmean(errors[:,:,i])) > 2*np.nanstd(errors[:,:,i])
+    #parms[:,:,i][mask3] = np.nan
+    #errors[:,:,i][mask3] = np.nan
 
 #---------------------------------------------------------------
 ## Draw and plot profiles 
@@ -257,12 +260,12 @@ print('Start plots')
 cm = plt.get_cmap('RdBu_r')
 cm.set_bad(color='0.8')
 
-mplt.plot_param_2D(locfig+'outputparamsKF.png', parms, L, xv, yv, cm=cm, 
+mplt.plot_param_2D(os.path.join(locfig, 'outputparamsKF.png'), parms, L, xv, yv, cm=cm, 
                         names=parm_names, axlim=[minlon,maxlon,minlat,maxlat])
 
 cm = plt.get_cmap('viridis')
 cm.set_bad(color='0.8')
-mplt.plot_param_2D(locfig+'outputstd.png', errors, L, xv, yv, cm=cm, norm='log', 
+mplt.plot_param_2D(os.path.join(locfig, 'outputstd.png'), errors, L, xv, yv, cm=cm, norm='log', 
                         names=parm_names, axlim=[minlon,maxlon,minlat,maxlat])
 
 ########### Plot Time series of selected pixels
@@ -272,7 +275,7 @@ Xpxl= np.random.randint(0,nx-1,size=Npix)
 pixels = [(i,j)for i,j in zip(Ypxl,Xpxl)]
 letter = ['A','B','C','D','E','F']
 
-mplt.plot_TS(locfig+'timeseries_randpxls_one.png', dates, phases, ph_std,
+mplt.plot_TS(os.path.join(locfig, 'timeseries_randpxls_one.png'), dates, phases, ph_std,
             pixel=pixels, model=model, params=parms[:], label=letter)
 
 fig0,ax0 = plt.subplots(1,len(pixels),figsize=(11,2.9),sharex=True,sharey=True)
@@ -299,7 +302,7 @@ for i in range(len(ax0)):
     ax0[i].text(0.88,0.85,letter[i],transform=ax0[i].transAxes,
                                 fontsize=16,weight = 'semibold')
 
-fig0.savefig(locfig+'timeseries_randpxls.png',dpi=250,bbox_inches='tight')
+fig0.savefig(os.path.join(locfig, 'timeseries_randpxls.png'),dpi=250,bbox_inches='tight')
 
 ########### Plot Cummulated displacement 
 fig,ax = plt.subplots(1,1,figsize=(9.5,8),sharex=True,sharey=True)
@@ -343,7 +346,7 @@ if VOLC :
                         fontsize=9,horizontalalignment='center')
 
 plt.colorbar(img0,ax=ax)
-fig.savefig(locfig+'displacement.png',dpi=250,bbox_inches='tight')
+fig.savefig(os.path.join(locfig, 'displacement.png'),dpi=250,bbox_inches='tight')
 
 ########## Project on regular axes 
 if PROJ :
@@ -359,7 +362,7 @@ if PROJ :
         ax2[i].set_title(titles[i])
         plt.colorbar(img,ax=ax2[i])
 
-    fig2.savefig(locfig+'displacement_proj.png',dpi=250,bbox_inches='tight')
+    fig2.savefig(os.path.join(locfig, 'displacement_proj.png'),dpi=250,bbox_inches='tight')
     
     
 #---------------------------------------------------------------

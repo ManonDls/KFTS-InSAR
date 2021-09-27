@@ -57,13 +57,15 @@ locfig = loc + config['OUTPUT'].get('figdir', fallback='')
 
 subregion=None
 TRUNCDATA=False
-secFT = config['FOR TESTING']
-SUBREGION   = secFT.getboolean('SUBREGION', fallback=False)
-if SUBREGION:
-    x1,x2,y1,y2 = literal_eval(secFT.get('limval',fallback='0,0,0,0'))
-    subregion   = infmt.Subregion(x1,x2,y1,y2)
-    print("WARNING: select subregion",x1,x2,y1,y2)
-TRUNCDATA   = secFT.getboolean('TRUNCDATA', fallback=False)
+
+if config.has_section('FOR TESTING'):
+    secFT = config['FOR TESTING']
+    SUBREGION = secFT.getboolean('SUBREGION', fallback = False)
+    if SUBREGION:
+        x1,x2,y1,y2 = literal_eval(secFT.get('limval',fallback = '0,0,0,0'))
+        subregion = infmt.Subregion(x1, x2, y1, y2)
+        print("WARNING: select subregion", x1, x2, y1, y2)
+    TRUNCDATA   = secFT.getboolean('TRUNCDATA', fallback=False)
 
 infile = os.path.join(outdir,'Phases.h5')
 
@@ -166,7 +168,7 @@ ax1[1].set_title("Mean standard deviation\n of phases max= {}".format(
 #plot reconstituted and real igram 
 fig,ax = plt.subplots(2,3,figsize=(10,7))
 ax = ax.ravel()
-plt.suptitle('reconstructed-real (top) and real (bottom) interferograms')
+plt.suptitle("Residual (=reconstructed minus real) (top) and\n real (bottom) interferograms")
 
 tomap = np.random.randint(0,Nint,size=3)
 for i in range(3):
@@ -204,7 +206,7 @@ if args.losfile is not None:
 ######################## Save Figures ##########################################
 resol = 200
 
-fig.savefig(locfig+'Data_interfero_sample.png',dpi=resol)
-fig1.savefig(locfig+'RMS_kf.png',dpi=resol)
+fig.savefig(os.path.join(locfig, 'Data_interfero_sample.png'),dpi=resol)
+fig1.savefig(os.path.join(locfig, 'RMS_kf.png'),dpi=resol)
 plt.close('all')
 

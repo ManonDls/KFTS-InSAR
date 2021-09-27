@@ -9,6 +9,7 @@ v0.1.0 :[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3816783.svg)](https:
 ### Documentation
 
 https://manondls.github.io/KFTS-InSAR/
+[Dalaison & Jolivet (2020)](https://doi.org/10.1029/2019JB019150)
 
 ### Assumptions
 
@@ -35,4 +36,10 @@ To quickly visualize outputs and plot metrics :
 python kf2rms.py -c configs/config_Etna.ini 
 python checkinnov.py -c configs/config_Etna.ini 
 python plotoutput.py -c configs/config_Etna.ini  -geom ./ -rmsTh 2
+```
+### Synthetics 
+
+To reproduce the synthetic data set in Dalaison & Jolivet (2020)
+```
+python synthetic_data.py
 ```

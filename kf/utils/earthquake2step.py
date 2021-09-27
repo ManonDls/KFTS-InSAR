@@ -23,23 +23,23 @@ import operator
 
 #############################  CONFIGURATION  #############################
 # LOCATIONS
-loc = '/Users/username/Yourfolder/'
-infile  = loc + 'PROC-STACK.h5'  
+loc = 'testdata/synthfault/'
+infile  = loc + 'Synth_interf.h5'  
 
-eqinfo  = '../../GCMT/CMT_KF.txt'
-eqloc   = '../../GCMT/CMT_KF_ISC.txt' #relocalised events when available
+eqinfo  = loc + 'eq_properties.txt'
+eqloc   = ''                  #relocalised events when available
 lonfile = loc + 'lon.flt'
 latfile = loc + 'lat.flt'
 
-RELOC = True   # relocate using second catalogue (eqloc)?
-EXTEND = True  # get newer earthquakes and big (Mw>4) missing
+RELOC = False   # relocate using second catalogue (eqloc)?
+EXTEND = False  # get newer earthquakes and big (Mw>4) missing
 SELECT = True  # select event with greater chance to appear in data
 
 #Outputs
 PLOT = True
-outfig  = loc+'test/earthquakes-GCMT.png'
-outfile = loc + 'test/EQ_list.txt'
-outplotinfo = loc + 'test/EQ_info.txt'
+outfig  = loc+'earthquakes-GCMT.png'
+outfile = loc +'EQ_list.txt'
+outplotinfo = loc +'EQ_info.txt'
 
 # CONSTANTS
 mu  = 30 *10**9                     # rigidity Pa : kg m−1 s−2
@@ -50,8 +50,11 @@ print('Load data')
 
 fin    = h5py.File(infile,'r')
 
-if 'PROC-STACK' in infile:
-    ny, nx = np.shape(fin['cmask'])
+if ('STACK' in infile) or ('interf' in infile):
+    try : 
+        ny, nx = np.shape(fin['igram'])[1:]
+    except : 
+        ny, nx = np.shape(fin['figram'])[1:]
 elif 'Phases' in infile:
     ny, nx = np.shape(fin['rawts'])[:-1]
 else : 
@@ -75,8 +78,8 @@ lat    = np.reshape(lattmp,(ny,nx))
 
 if PLOT :
     fin = h5py.File(infile,'r')
-    if 'PROC-STACK' in infile:
-        toplot = fin['figram'][-1,:,:]
+    if ('STACK' in infile) or ('interf' in infile):
+        toplot = fin['igram'][-1,:,:]
     elif 'Phases' in infile:
         toplot = fin['rawts'][:,:,-1]
 
@@ -94,8 +97,8 @@ Yr,Mo,Dy,Hr,Min  = np.loadtxt(eqinfo, unpack=True, usecols=list(range(4,9)), dty
 if isinstance(Yr,np.int32):
     #Special case of one earthquake
     Leq = 1
-    Yr,Mo,Dy,Hr,Min  = [Yr],[Mo],[Dy],[Hr],[Min]
-    elon,elat,Deq,Mw = [elon], [elat], [Deq], [Mw]
+    Yr,Mo,Dy,Hr,Min  = np.array([Yr]),np.array([Mo]),np.array([Dy]),np.array([Hr]),np.array([Min])
+    elon,elat,Deq,Mw = np.array([elon]), np.array([elat]), np.array([Deq]), np.array([Mw])
 else:
     Leq = len(Yr)
 
@@ -203,8 +206,8 @@ for i in range(Leq):
 # Condition on where is the earthquake in the image
 maskeq = np.ones(Leq)
 if SELECT:
-    maskeq[(Xeq>10)^(Yeq>10)] = 0       #not at the edge of image
-    maskeq[(Xeq<nx-10)^(Yeq<ny-10)] = 0
+    maskeq[(Xeq>1)^(Yeq>1)] = 0       #not at the edge of image
+    maskeq[(Xeq<nx-1)^(Yeq<ny-1)] = 0
 
     teq = teq[maskeq>0]
     Xeq = Xeq[maskeq>0]

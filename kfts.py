@@ -52,18 +52,18 @@ class RunKalmanFilter(object):
         '''
         
         loc     = config['INPUT'].get('workdir', fallback='./')
-        self.infile  = loc + config['INPUT'].get('infile')
+        self.infile  = os.path.join(loc, config['INPUT'].get('infile'))
         self.fmtfile = config['INPUT'].get('fmtfile', fallback='ISCE')
         self.instate = config['INPUT'].get('instate', fallback=None)
         self.eqinfo  = config['INPUT'].get('eqinfo', fallback=None)
 
         if self.instate is not None:
-            self.instate = loc + self.instate
+            self.instate = os.path.join(loc, self.instate)
         if self.eqinfo is not None:
-            self.eqinfo = loc + self.eqinfo
+            self.eqinfo = os.path.join(loc, self.eqinfo)
 
-        self.outdir = loc + config['OUTPUT'].get('outdir', fallback='')
-        self.figdir = loc + config['OUTPUT'].get('figdir', fallback='')
+        self.outdir = os.path.join(loc, config['OUTPUT'].get('outdir', fallback=''))
+        self.figdir = os.path.join(loc, config['OUTPUT'].get('figdir', fallback=''))
 
         secMS      = config['MODEL SETUP']
         self.EQ    = secMS.getboolean('EQ', fallback = False)
