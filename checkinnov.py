@@ -143,7 +143,7 @@ for k in range(L):
     for j in range(Npix):
         toplot = gain[sy[j],sx[j],:,k]
         toplot[toplot==0]=np.nan
-        ax1[k].plot(dates[1:],toplot,'.')
+        ax1[k].plot(dates[-Nt:],toplot,'.')
     ax1[k].set_title(labels[k])
     ax1[k].set_xlabel('Time')
     #print("labels are", ax1[k].xaxis.get_majorticklabels())
