@@ -257,13 +257,13 @@ plt.savefig(locfig+'profile.png',dpi=200)
 print('Start plots')
 
 ########## Parameter maps with uncertainties
-cm = plt.get_cmap('RdBu_r')
+cm = plt.get_cmap('RdBu_r').copy()
 cm.set_bad(color='0.8')
 
 mplt.plot_param_2D(os.path.join(locfig, 'outputparamsKF.png'), parms, L, xv, yv, cm=cm, 
                         names=parm_names, axlim=[minlon,maxlon,minlat,maxlat])
 
-cm = plt.get_cmap('viridis')
+cm = plt.get_cmap('viridis').copy()
 cm.set_bad(color='0.8')
 mplt.plot_param_2D(os.path.join(locfig, 'outputstd.png'), errors, L, xv, yv, cm=cm, norm='log', 
                         names=parm_names, axlim=[minlon,maxlon,minlat,maxlat])
@@ -275,6 +275,7 @@ Xpxl= np.random.randint(0,nx-1,size=Npix)
 pixels = [(i,j)for i,j in zip(Ypxl,Xpxl)]
 letter = ['A','B','C','D','E','F']
 
+dates = dates[:]
 mplt.plot_TS(os.path.join(locfig, 'timeseries_randpxls_one.png'), dates, phases, ph_std,
             pixel=pixels, model=model, params=parms[:], label=letter)
 
@@ -318,7 +319,7 @@ if TOPO :
         ax[i].pcolormesh(tlon,tlat,topodat,cmap=newcm,vmax=3000)
 # MAKE CODE CRASH
 
-cm = plt.get_cmap('jet')
+cm = plt.get_cmap('jet').copy()
 cm.set_bad(color='0.8')
 
 Vmin, Vmax = np.nanpercentile(disp,1), np.nanpercentile(disp,99)
