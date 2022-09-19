@@ -28,25 +28,6 @@ from ast import literal_eval
 from matplotlib import path
 import scipy.linalg 
 
-#
-#
-#python ~/MYBIN/insar/giant_utils/timeseries/prepSentinel4timeseries.py --slcFile ../master/IW1.xml --lookFile ../merged/interferograms/20180422_20180504/filt_ECMWF_ERA-5_fine.unw.xml --geomFile ../merged/geom_master/hgt.rdr --azlooks 5 --rglooks 30  
-
-# mkdir Stack/ Figs/ 
-
-# Get list of interferograms 
-# python ~/MYBIN/insar/giant_utils/timeseries/baselines_sentinel.py -b ../baselines -i ../merged/interferograms -o ifg_all.list -f Figs/baselines_all.png 
-
-#python prepxml_SBAS.py  
-# python  ~/MYBIN/insar/giant_utils/fixLonLat.py -x data.xml 
-
-# ut and reference interferograms according to data.xml and copy them in one H5 file 
-#python ~/MYBIN/insar/giant/GIAnT/SCR/PrepIgramStack.py -i ifg_all.list -o RAW-STACK.h5 -x data.xml -u userfn.py -noplot 
-
-#If you don't want to fit the ramp on the whole region, you can select a polygonal subregion on which the ramp is adjusted.This polygone is defined by its vertices coordinates (integers referring to pixel numbers) in argument introduced by -r as N x,y pairs separated by spaces with N≥3 (e.g. -r 0,5535 2490,5535 2490,4965 0,1965)
-
-#python ~/MYBIN/insar/giant/GIAnT/SCR/ProcessStack.py -i RAW-STACK.h5 -o PROC-STACK.h5 -x data.xml -p nsbas.xml
-
 
 class GetConfig(object):
     '''
