@@ -426,7 +426,7 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
     # Eliminate rows containing NaNs 
     line_av = np.mean(lon,axis=1)
     idx_fin = np.where(np.isfinite(line_av))[0] # indices of rows filled with finite values
-    top,bot = idx_fin[0], idx_fin[-1]-1000
+    top,bot = idx_fin[0], idx_fin[-1]
     
     lon   = lon[top:bot,:]
     lat   = lat[top:bot,:]

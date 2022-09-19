@@ -45,3 +45,11 @@ To reproduce the synthetic data set in Dalaison & Jolivet (2020)
 ```
 python synthetic_data.py
 ```
+
+### Prepare input H5file
+
+A working script for ISCE is provided. If other software are used, adjustment of formats and file structure probably has to be done. Parameters in config file must be adjusted to your setting. 
+```
+python prepare_input.py -c configs/config_prepareinput.ini 
+```
+Many options are not required by KFTS but help clean the interferogram stack. Examples include deramping, filtering out low coherence region, producing longitude and latitude files with the same geometry as interferograms, cutting interferogram edges. Referencing to a common region defined in all interferograms (not NaN) is compulsory. Zeros in interferograms are assumed to be NaNs. 
