@@ -21,7 +21,7 @@ import os   #using operating system dependent functionality.
 
 class TimeFct(object):
 
-    def __init__(self, time, model, origintime=0.0):
+    def __init__(self, time, model, origintime=0.0, verbose=False):
         '''
         Initialization of the class, which build parametrised function of time. 
         This creates an object that can build functional representations \
@@ -60,74 +60,77 @@ class TimeFct(object):
         self.model = model         #reference should be kept as it is
         self.mod   = model         #model we will work with, may be truncated/expended
         self.check = False         #has the model been checked? 
+        self.verbose = verbose
     
-    def check_model(self, verbose=True):
+    def check_model(self):
         ''' 
-            * *verbose* : print wordy description of the building block of the model (True or False)
+        Verify number of parameters are consistent and write down summary of model description
         '''     
-        
-        if verbose==False:
-            original_stdout = sys.stdout
-            sys.stdout = open(os.devnull, 'w')
         
         k = 0 #count number of param in m 
         for mod in self.model : 
             if mod[0] in ('POLY','POLYNOMIAL'):
                 assert len(mod)==2, "Syntax: ['POLYNOMIAL', degree (int)]"
-                print('+ Polynomial function of degree', mod[1])
+                if self.verbose:
+                    print('+ Polynomial function of degree', mod[1])
                 k += mod[1]+1
                 
             elif mod[0] in ('COS','COSINE'):
                 assert len(mod)==2, "Syntax: ['COSINE', frequency (float)]"
-                print('+ Cosine function of frequency', mod[1])
+                if self.verbose:
+                    print('+ Cosine function of frequency', mod[1])
                 k += +1
 
             elif mod[0] in ('SIN','SINE'):
                 assert len(mod)==2, "Syntax: ['SINE', frequency (float)]"
-                print('+ Sine function of frequency', mod[1])
+                if self.verbose:
+                    print('+ Sine function of frequency', mod[1])
                 k += +1
 
             elif mod[0] in ('STEP','EARTHQUAKE','HEAVISIDE'):
                 assert len(mod)>=2, "Syntax: ['STEP', time1, time2, ...]"
-                print('+ Heaviside function to model earthquakes at times', mod[1:])
+                if self.verbose:
+                    print('+ Heaviside function to model earthquakes at times', mod[1:])
                 k += len(mod[1:])
                 
             elif mod[0] in ('HTAN'):
                 assert len(mod)>=3, "Syntax: ['HTAN', time1, width1, time2, width2,...]"
-                print('+ Hyperbolic tangent to model slow slip at times', mod[1::2],'and width',mod[2::2])
+                if self.verbose:
+                    print('+ Hyperbolic tangent to model slow slip at times', mod[1::2],'and width',mod[2::2])
                 k += len(mod[1::2])
                 
             elif mod[0] in ('EXP', 'EXPONENTIAL'):
                 assert len(mod)==3, "Syntax: ['EXP', start time, characteristic time]"
-                print('+ Exponential function (-exp(-x)) starting at time',mod[1],'with characteristic time',mod[2])
+                if self.verbose:
+                    print('+ Exponential function (-exp(-x)) starting at time',mod[1],'with characteristic time',mod[2])
                 k += 1
 
             elif mod[0] in ('LOG', 'LOGARITHM'):
                 assert len(mod)==3, "Syntax: ['LOG', start time, characteristic time]"
-                print('+ Logarithmic function starting at time',mod[1],'with characteristic time',mod[2])
+                if self.verbose:
+                    print('+ Logarithmic function starting at time',mod[1],'with characteristic time',mod[2])
                 k += 1
         
             elif mod[0] in ('Bsp', 'BSPLINE'):
                 assert len(mod)>=4, "Syntax: ['BSPLINE', order, time1, width1, time2, width2]"
-                print('+ B-Spline of degree',mod[1],'centred on times', mod[2::2],'and with width',mod[3::2])
+                if self.verbose:
+                    print('+ B-Spline of degree',mod[1],'centred on times', mod[2::2],'and with width',mod[3::2])
                 k += len(mod[2::2])
                 
             elif mod[0] in ('Isp', 'ISPLINE'):
                 assert len(mod)>=4, "Syntax: ['ISPLINE', order, time1, width1, time2, width2]"
-                print('+ Integrated Spline of degree',mod[1],'centred on times', mod[2::2],'and with width',mod[3::2])
+                if self.verbose:
+                    print('+ Integrated Spline of degree',mod[1],'centred on times', mod[2::2],'and with width',mod[3::2])
                 k += len(mod[2::2])
             
             else:
                 assert False, 'Functional form unknown: {}'.format(mod)
         
         self.L = k
-        print('There need to be',k,'parameters in m')
-        print('**** MODEL OK ****') 
+        if self.verbose:
+            print('There need to be',k,'parameters in m')
+            print('**** MODEL OK ****') 
         self.check = True
-        
-        if verbose==False:
-            sys.stdout.close()
-            sys.stdout = original_stdout
         
         
     def transition_vect(self,t):
@@ -345,7 +348,7 @@ class TimeFct(object):
                 k += nb_eq
                     
             elif mod[0] in ('HTAN'):
-                print("WARNING: haven't been tested")
+                print("WARNING: HTAN function haven't been tested")
                 nb_ss =int((len(mod)-1)/2)
                 for i in range(nb_ss):
                     mod[1+i*2] += t0

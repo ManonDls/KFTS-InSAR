@@ -295,7 +295,7 @@ class RunKalmanFilter(object):
             Leq,P0eq = self.earthquakeIntegration(data)
         
         # Start class dealing with the functional model
-        tfct = TimeFct(data.time,self.model)
+        tfct = TimeFct(data.time,self.model,verbose=self.isTraceOn())
         tfct.check_model(verbose = self.VERBOSE)
         L = len(self.sig_a)
         

@@ -102,8 +102,11 @@ inparm  = outdir +'States.h5'
 inrawts = outdir +'Phases.h5'
 
 # Coordinates
-lon = loc + args.geom + 'lon.flt'
-lat = loc + args.geom + 'lat.flt'
+if args.geom == 'None':
+    args.geom = None
+if args.geom is not None:
+    lon = loc + args.geom + 'lon.flt'
+    lat = loc + args.geom + 'lat.flt'
 
 if args.rmsTh is not None :
     RMS = True
@@ -133,9 +136,10 @@ if args.volc is not None :
 #--------------------------------------------------------------------
 ## Import Data
 
-# Get longitude and latitude
-lon = np.fromfile(lon, dtype=np.float32)
-lat = np.fromfile(lat, dtype=np.float32)
+if args.geom is not None:
+    # Get longitude and latitude
+    lon = np.fromfile(lon, dtype=np.float32)
+    lat = np.fromfile(lat, dtype=np.float32)
 
 #print('longitude',np.shape(lon),lon)
 #print('latitude',np.shape(lat),lat)
@@ -156,8 +160,11 @@ dates   = fin['tims']
 #Lon, lat ready for plotting
 print('2D map shape x',nx,'and y',ny)
 print('Number of parameters:',L)
-yv    = np.reshape(lat,(ny,nx))
-xv    = np.reshape(lon,(ny,nx))
+if args.geom is not None:
+   yv    = np.reshape(lat,(ny,nx))
+   xv    = np.reshape(lon,(ny,nx))
+else :
+   yv,xv = np.meshgrid( list(range(nx)),list(range(ny)) )
 
 #deal with zero lon and lat
 if args.box is None:
