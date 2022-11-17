@@ -426,10 +426,12 @@ class BuildStack(object):
         A = self.buildAmat(self.ny*self.nx,X,Y)
         dphs = np.dot(-A,ramppoly)
         del A
-        
+       
+        mask = (phs == 0.0) #save where zeros as NaN
         dphs = np.reshape(dphs,(self.ny,self.nx))
         dphs = phs + dphs
-    
+        dphs[mask] = 0.0 
+
         return dphs
     
     def deramp(self, data, out, network=True, poly=3, dref=[(0,0)]):
@@ -438,7 +440,8 @@ class BuildStack(object):
         is available. 
         
         Args:
-            * out       Output stack object
+            * data      Input stack object (interferograms)
+            * out       Output stack object (dataset will be overwritten)
         
         Kwargs:
             * network   Network deramping or individual deramping
@@ -477,7 +480,8 @@ class BuildStack(object):
             print("Get ramp for each interferogram")
         for kkk in range(self.nslice):
             dat = data[kkk, :, :]
-    
+            dat[dat==0.0] = np.nan
+
             mask = np.isfinite(dat)
             masktmp = mask *maskref
     
