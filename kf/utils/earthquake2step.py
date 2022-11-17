@@ -38,8 +38,8 @@ SELECT = True  # select event with greater chance to appear in data
 #Outputs
 PLOT = True
 outfig  = loc+'earthquakes-GCMT.png'
-outfile = loc +'EQ_list.txt'
-outplotinfo = loc +'EQ_info.txt'
+outfile = loc + 'EQ_list.txt'
+outplotinfo = loc + 'EQ_info.txt'
 
 # CONSTANTS
 mu  = 30 *10**9                     # rigidity Pa : kg m−1 s−2

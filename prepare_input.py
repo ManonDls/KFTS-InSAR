@@ -131,7 +131,8 @@ class GetConfig(object):
 #Create IFG list
 
 def getPairs(igramsDir):
-    '''Get the two dates of each interferogram
+    '''
+    Get the two dates of each interferogram
     produced by ISCE, in Igram directory.'''
     
     # Get pairs
@@ -249,7 +250,8 @@ def save2file(dates1, dates2, outfile, dateList = None, baselineList = None, sat
 #Find path of interferograms 
 
 def makefnames(dirname, dates1,dates2):
-    '''Generates paths to the files needed for creating the stack.
+    '''
+    Generates paths to the files needed for creating the stack.
     .. Args:
         * dates1     - Date of master 
         * dates2     - Date of slave
@@ -309,7 +311,8 @@ class BuildStack(object):
         return Uts
         
     def ConnectMatrix(self, dates):
-        '''Gets the connectivity matrix for given set of IFGs.
+        '''
+        Gets the connectivity matrix for given set of IFGs.
         Args:
             * dates        ->  List of pairs of strings 
         Returns:
@@ -329,6 +332,10 @@ class BuildStack(object):
         Uts = self.datenum(uscenes) #ordinal dates
         ind = np.argsort(Uts) #Increasing order of time
         uscenes = uscenes[ind]
+        
+        if dates.dtype != uscenes.dtype: #check if bytes 
+            dates.astype(str)
+            uscenes.astype(str)
 
         ConnMat = np.zeros((Nifg,Nsar))
         for k in range(Nifg):
@@ -375,7 +382,8 @@ class BuildStack(object):
         return A 
         
     def findramp(self, phs,mask):
-        '''Estimate the best-fitting ramp parameters for a matrix.
+        '''
+        Estimate the best-fitting ramp parameters for a matrix.
         Args:
             * phs     -  Input unwrapped phase matrix.
             * mask    -  Mask of reliable values.
@@ -400,7 +408,8 @@ class BuildStack(object):
         return ramppoly
     
     def removeramp(self, phs,ramppoly):
-        '''Deramp a matrix with the given ramp polynomial.
+        '''
+        Deramp a matrix with the given ramp polynomial.
         .. Args:
             * phs             Input matrix
             * ramppoly        Ramp polynomial
@@ -424,7 +433,8 @@ class BuildStack(object):
         return dphs
     
     def deramp(self, data, out, network=True, poly=3, dref=[(0,0)]):
-        '''Network deramping of the stack of interferograms. Used when no GPS 
+        '''
+        Network deramping of the stack of interferograms. Used when no GPS 
         is available. 
         
         Args:

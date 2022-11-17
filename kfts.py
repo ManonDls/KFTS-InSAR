@@ -51,7 +51,9 @@ class RunKalmanFilter(object):
             :config: open config file (.ini format)
         '''
         
-        loc     = config['INPUT'].get('workdir', fallback='./')
+        loc   = os.path.abspath(config['INPUT'].get('workdir', fallback='./'))
+        assert os.path.isdir(loc), "working directory {} defined in {} does not exist".format(loc,config)
+        
         self.infile  = os.path.join(loc, config['INPUT'].get('infile'))
         self.fmtfile = config['INPUT'].get('fmtfile', fallback='ISCE')
         self.instate = config['INPUT'].get('instate', fallback=None)
@@ -61,15 +63,21 @@ class RunKalmanFilter(object):
             self.instate = os.path.join(loc, self.instate)
         if self.eqinfo is not None:
             self.eqinfo = os.path.join(loc, self.eqinfo)
-
+            
         self.outdir = os.path.join(loc, config['OUTPUT'].get('outdir', fallback=''))
         self.figdir = os.path.join(loc, config['OUTPUT'].get('figdir', fallback=''))
-
+        
+        #check if output directories exist otherwise create them
+        os.makedirs(self.outdir,exist_ok=True)
+        os.makedirs(self.figdir,exist_ok=True)
+        
         secMS      = config['MODEL SETUP']
         self.EQ    = secMS.getboolean('EQ', fallback = False)
         freq       = secMS.getfloat('freq', fallback = 2*np.pi)
         self.sig_y = secMS.getfloat('sig_y', fallback = 10.0)
         self.sig_i = secMS.getfloat('sig_i', fallback = 0.01)
+        
+        self.dtmax = secMS.getfloat('Dtime_max', fallback = None)
         
         try :
             self.model = literal_eval(secMS.get('model'))
@@ -81,6 +89,7 @@ class RunKalmanFilter(object):
         self.sig_a = literal_eval(secMS.get('sig_a'))
         self.sig_a = list(self.sig_a)
         
+        
         secKFS       = config['KALMAN FILTER SETUP']
         self.VERBOSE = secKFS.getboolean('VERBOSE', fallback = False)
         self.PLOT    = secKFS.getboolean('PLOT', fallback = False)
@@ -89,7 +98,7 @@ class RunKalmanFilter(object):
         
         if self.isTraceOn():
             print("Functional model string is: {}".format(self.model))
-            print("Exclude pixels is less than {} interferograms".format(self.pxlTh)) 
+            print("Exclude pixels with less than {} valid interferograms".format(self.pxlTh)) 
 
         ## Optional section
         # initialize
@@ -117,7 +126,7 @@ class RunKalmanFilter(object):
         # Read data file
         data = infmt.SetupKF(
             self.infile, 
-            mpi = self.comm, 
+            comm = self.comm, 
             mpiarg = (self.rank,self.size), 
             fmt = self.fmtfile, 
             verbose = self.VERBOSE,
@@ -166,7 +175,9 @@ class RunKalmanFilter(object):
             Xeq,Yeq = [Xeq],[Yeq]
             Rinf,Aeq,sx,sy = [Rinf],[Aeq],np.array(sx),np.array(sy)
         elif isinstance(teq,np.ndarray):
-            teq = teq.tolist()
+            iord = np.argsort(teq) #verify chronological order
+            Xeq,Yeq,Rinf,Aeq,sx,sy = Xeq[iord],Yeq[iord],Rinf[iord],Aeq[iord],sx[iord],sy[iord]
+            teq = teq[iord].tolist()
             Leq = len(teq)
         else:
             assert False, "Verify content of {}".format(self.eqinfo)
@@ -184,11 +195,46 @@ class RunKalmanFilter(object):
             width = Rinf[i]/(np.mean([np.mean(sx),np.mean(sy)]))
             fct   = twoD_Gauss(data.xv[data.miny:data.maxy,:], data.yv[data.miny:data.maxy,:],
                             Aeq[i]**2, center=(Xeq[i],Yeq[i]), sig=width)
-            fct[fct < 1.] = 0.
+            fct[fct < 1.] = 0. # below an std of 1, approximate to zero (parameter not-optimized)
             P0eq[:,:,i] = fct
 
         return Leq,P0eq
-
+    
+    def loadcheck_pastoutputs(self,data,tfct):
+        '''
+        Check input file consitency when restarting and frame time series update 
+            * *data* : initiated data class (new interferograms)
+            * *tfct* : initiated model class 
+        '''
+        
+        # Import common things to all pixels to gain time 
+        finstate  = h5py.File(self.instate,'r')
+        statetime = finstate['tims'][:]     #contains as many dates than state contains phases
+        indxs     = finstate['indx'][:].tolist()
+        
+        # Identify new dates with respect to former state
+        newdate = [t for t in data.time if t not in statetime]
+        
+        # Check consistency 
+        assert (len(newdate)  > 0), "No supplementary date in file {} wrt existing {}".format(self.infile,self.instate)
+        assert (statetime[0] <= data.time[0]), "New data involves timesteps older than what was retained in the former state"
+        
+        # Set number of phases to keep for latter update
+        data.max_tsep = np.max([data.max_tsep,len(statetime)])
+        toverl = len(statetime) - len(data.time) + len(newdate) #number of past dates not in data to recover
+        
+        if self.isTraceOn():
+            print('Data contains {} new time steps'.format(len(newdate)))
+            print('There are {} estimates that will be potentially updated'.format(len(indxs)-toverl))
+        
+        # Look for parameters concerning old stuff wrt starting time
+        if self.dtmax is not None: 
+            tfct.identify_outdated(self.dtmax) 
+            if tfct.Cstindex is None : 
+                self.dtmax  == None
+        
+        return finstate, statetime, indxs, toverl
+        
 
     def initCovariances(self, L):
         '''Create arrays for the initial state Covariance matrix (P0)
@@ -263,29 +309,14 @@ class RunKalmanFilter(object):
         P0 = P_par*np.eye(L+1)
         
         #bound t_sep to save memory 
-        #data.max_tsep = np.min([data.max_tsep,10])
+        data.max_tsep = np.min([data.max_tsep,10])
 
-        toverl = 1
+        toverl = 0
+        tshift = 1
         if self.UPDT == True:
-            # Import common things to all pixels to gain time 
-            finstate  = h5py.File(self.instate,'r')
-            statetime = finstate['tims'][:]     #contains as many dates than state contains phases
-            indxs     = finstate['indx'][:].tolist()
+            finstate, statetime, indxs, toverl = self.loadcheck_pastoutputs(data,tfct)
+            tshift = len(indxs)
             
-            # Identify new dates with respect to former state
-            newdate = [t for t in data.time if t not in statetime]
-
-            # Check consistency 
-            assert (len(newdate)  > 0), "No supplementary date in file {} wrt existing {}".format(infile,instate)
-            assert (statetime[0] <= data.time[0]), "New data involves timesteps older than what was retained in the former state"
-            
-            # Set number of phases to keep for latter update
-            data.max_tsep = np.max([data.max_tsep,len(statetime)])
-            toverl = len(indxs) #part of the time space with no new phase estimates (updates only)
-             
-            if self.isTraceOn():
-                print('Data contains {} new time steps'.format(len(newdate)))
-
         if self.isTraceOn():
             print('-- Open H5 file for storage --')
         
@@ -297,11 +328,11 @@ class RunKalmanFilter(object):
             sufx=''
         
         fstates, fphases, fupdate = infmt.initiatefileforKF(
-                    self.outdir + 'States{}.h5'.format(sufx), 
-                    self.outdir + 'Phases{}.h5'.format(sufx),
+                    os.path.join(self.outdir, 'States{}.h5'.format(sufx)), 
+                    os.path.join(self.outdir, 'Phases{}.h5'.format(sufx)),
                     L, data, self.model, (m_err,self.sig_i,self.sig_y),
-                    updtfile= self.outdir + 'Updates{}.h5'.format(sufx), 
-                    comm = self.comm, toverlap = toverl)
+                    updtfile= os.path.join(self.outdir, 'Updates{}.h5'.format(sufx)),
+                    comm = self.comm, toverlap = toverl, tshift = tshift)
 
         if self.isTraceOn():
             print('-- START Kalman Filter --')
@@ -324,7 +355,7 @@ class RunKalmanFilter(object):
                     P0 = np.diag(diagP0)
 
                 if self.UPDT == True : 
-                    kal.restart_from_file(finstate, statetime, indxs)
+                    kal.restart_from_file(finstate, statetime, indxs, self.dtmax)
                 else :
                     kal.start_new(m0, P0)
                     
@@ -348,14 +379,14 @@ class RunKalmanFilter(object):
 if __name__ == '__main__':
     
     #First get file name from inline argument
-    parser = argparse.ArgumentParser( description = 'InSAR Time series analysis with a Kalman Filter')
+    parser = argparse.ArgumentParser(description = 'InSAR Time series analysis with a Kalman Filter')
     parser.add_argument(
         '-c', 
         type=str, 
         dest = 'config', 
         default = None,
-        help = 'Specify INI config file containing at least sections INPUT,OUTPUT, MODEL SETUP, KALMAN FILTER SETUP'
-        )
+        help = 'Specify INI config file containing at least sections INPUT,OUTPUT, MODEL SETUP, KALMAN FILTER SETUP')
+        
     args = parser.parse_args()
     while (not args.config):
         print('Please choose a config file')

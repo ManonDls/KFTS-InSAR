@@ -66,7 +66,7 @@ class Kalman(object):
         assert (np.shape(self.link)[0] == np.shape(data.igram[:,j,i])[-1]), 'rows of links should correspond to numb of interfero'
     
     
-    def restart_from_file(self,fin,pasttime,indxs):
+    def restart_from_file(self,fin,pasttime,indxs, dtmax = None):
         '''
         Extract initial condition from OPENED infile (fin)  which stores previously 
         computed mk and Pk for all pixels including pixel[i,j]
@@ -106,8 +106,13 @@ class Kalman(object):
         if np.shape(self.link)[1] != len(self.t):  
             #WARNING: columns of links and time must be of same length, modify links
             self.link   = self.link[:,-len(self.t):]
-
-    
+        
+        if dtmax is not None :
+            self.m,self.P = self.modelobj.remove_oldstuff(self.m,self.P)
+            self.mod = self.modelobj.mod
+            self.L = self.modelobj.L
+            
+            
     def start_new(self,m0, P0):
         '''
         Start from skratches
@@ -506,7 +511,7 @@ class Kalman(object):
             
             self.m_indxs = np.append(self.m_indxs, self.idx0+k) #add last phase index 
             self.create_H_R_and_D(k, self.m_indxs-self.idx0)
-           
+        
             #Update matrices
             self.create_Q(m_err,phi_err,add_err,len(self.m))
             self.A = self.modelobj.create_A(k-1,len(self.m))
@@ -534,13 +539,9 @@ class Kalman(object):
                     #Add model element when getting close to relevant date
                     self.mod,n = self.modelobj.expend_model(k,2,verbose=False)
                     self.expend_m_P(self.L-n,n,70.**2.) #L already increased in timefunction
-
-                #Update matrices
-                #self.create_Q(m_err,phi_err,add_err,len(self.m))
-                #self.A = self.modelobj.create_A(k,len(self.m))
             
             #Plot
-            if plots == True : 
+            if plots == True :
                 cmap = [cm(1.*i/k_end) for i in range(k_end)] 
                 if ax1.ndim == 2:
                     self.plot_params(k,ax1[0,:],cmap)

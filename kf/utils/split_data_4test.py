@@ -21,7 +21,7 @@ elif fmtfile == 'RAW':
 elif fmtfile == 'Etna':
     intrfname = 'igram_aps'
 
-#Find line with recent interferograms 
+#Find line with recent interferograms
 intindx  = [i for i in range(data.links.shape[0]) if -1. in data.links[i,-NumRmvd:]]
 notintindx = [i for i in range(data.links.shape[0]) if i not in intindx]
 

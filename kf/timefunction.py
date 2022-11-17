@@ -216,6 +216,32 @@ class TimeFct(object):
         
         return A 
     
+    def find_coeff_lsq(self,evolv,err):
+        '''
+        Basic linear least-squares which finds of defined model
+            * evolv : time series of phase change (shape of time)
+            * err : standard deviation of shage  (shape of time)
+        '''
+        A = self.transition_vect(self.t)
+        y = evolv
+        
+        ### Weight matrix for covariance in Data
+        Cd_inv = np.eye(len(self.t))*(err)**(-1)
+        
+        ### Least square regression
+        Cm = np.linalg.inv(np.dot(np.dot(A.T,Cd_inv),A)) #posterior model covariance
+        
+        if evolv.ndim ==2:
+            ATb  = [np.dot(np.dot(A.T, Cd_inv), y[i,:]) for i in range(np.shape(evolv)[0])]
+            m    =  np.array([np.dot(Cm, ATb[i]) for i in range(np.shape(evolv)[0])])
+        else :
+            ATb  = np.dot(np.dot(A.T, Cd_inv), y)
+            m    = np.dot(Cm, ATb)
+        
+        merr = np.sqrt(np.diag(Cm))
+        
+        return m, merr
+        
     def draw_model(self,coeff):
         ''' 
         Gives f(t) as defined in model
@@ -482,6 +508,97 @@ class TimeFct(object):
         
         return self.mod,n 
     
+    def identify_outdated(self, dtmax):
+        '''
+        Function optimizing model as a function of starting time of time series, 
+        localize modification that will be berformed later on every state vectors/cov
+            * *dtmax* : time after event allowed to optimize localized function in time
+                        (apply only on 'STEP','EARTHQUAKE','HEAVISIDE' and cst of 'POLY')
+        '''
+                
+        indexdel = []    # indexes of parameters to remove
+        modeldel = []    # model element and index inside 
+        Cstindex = None  # index of cst term if time to fix it 
+          
+        if self.t[0] < dtmax : 
+            print("Starting time is {}".format(self.t[0]))
+            print("Existing model agrees with the maximum delta time set to {}".format(dtmax))
+        
+        else :
+            k  = 0 #count number of parameters
+            kk = 0 #count number of model elements
+            for mod in self.mod:
+                if mod[0] in ('POLY','POLYNOMIAL'):
+                    if mod[1]>=0:
+                       print("Fix model at origin (i.e. polynomial term of order zero).")
+                       print("    Consider it has already converged to a reliable value because {} > starting time ({})".format(dtmax,self.t[0]))
+                       Cstindex = k
+                       k += mod[1]+1
+                
+                elif mod[0] in ('STEP','EARTHQUAKE','HEAVISIDE'):
+                    kkk = [] #local count
+                    for i in range(1, len(mod)) : 
+                        if self.t[0] > mod[i] + dtmax :
+                            print("Remove event centered on {}".format(mod[1+i]))
+                            indexdel.append(k)
+                            kkk.append(i)
+                        modeldel.append((kk,kkk))
+                        k+=1
+                
+                elif mod[0] in ('COS','COSINE','SIN','SINE','EXP', 'EXPONENTIAL','LOG', 'LOGARITHM'):
+                    k += 1 #all functions with a single parameter 
+                        
+                elif mod[0] in ('HTAN'):
+                    for i in range(1,len(mod),2):
+                        k  += 1
+            
+                elif mod[0] in ('Bsp', 'BSPLINE','Isp', 'ISPLINE'):
+                    for i in range(2,len(mod),2):
+                        k  += 1
+                            
+                kk += 1
+        
+        self.Cstindex = Cstindex
+        self.indexdel = indexdel
+        
+        newmod = self.mod.copy()
+        for el in modeldel: 
+            kk,kkk = el
+            #remove specified indexes
+            newtiming = [t for i,t in enumerate(self.mod[kk]) if i not in kkk]
+            newmod[kk] = tuple(newtiming)
+            
+        #save new model
+        print("Define new model {}".format(newmod))
+        self.mod = newmod
+        
+    
+    def remove_oldstuff(self, m, P):
+        '''
+        Require the outputs of identify_outdated() 
+            * *m, P* : specify local state vector and covariance
+        '''
+        
+        if self.Cstindex is not None : 
+            dY = 0.0  # shift of origin 
+            for k in self.indexdel: 
+                dY += m[k] 
+                m = np.concatenate((m[:k],m[k+1:]))
+                P = np.delete(P,k,0) #row
+                P = np.delete(P,k,1) #column
+            
+             
+            # Shift and fix constant term    
+            m[self.Cstindex] += dY
+            # Set variance and covariance to zero
+            P[self.Cstindex,:] = 0 
+            P[:,self.Cstindex] = 0 
+            
+        else :
+            print("No outdated parameters identified. Model stay unchanged.")
+        
+        return m, P
+        
         
     def comp_phase_shift(self, m, P=None):
         '''

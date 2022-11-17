@@ -1,17 +1,18 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
     <title>4. Kalman Filter &#8212; KFTS-InSAR 0.0.1 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="5. Setup and formating for KF" href="fmt.html" />
@@ -32,15 +33,15 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="kalman-filter">
+  <section id="kalman-filter">
 <h1><span class="section-number">4. </span>Kalman Filter<a class="headerlink" href="#kalman-filter" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="theory">
+<section id="theory">
 <h2><span class="section-number">4.1. </span>Theory<a class="headerlink" href="#theory" title="Permalink to this headline">¶</a></h2>
 <p>See Dalaison &amp; Jolivet, 2020 <em>A Kalman Filter Time Series Analysis method for InSAR</em>, Journal of Geophysical Research - Solid Earth, <a class="reference external" href="https://manondls.github.io/publications/Dalaison_Jolivet_KFTS_2020.pdf">doi:10.1029/2019JB019150</a>.</p>
-</div>
-<div class="section" id="implementation">
+</section>
+<section id="implementation">
 <h2><span class="section-number">4.2. </span>Implementation<a class="headerlink" href="#implementation" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="introduction">
+<section id="introduction">
 <h3><span class="section-number">4.2.1. </span>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h3>
 <p>Below is the class computing the time series analysis pixel by pixel.
 Once the class is initialized, the main steps of the procedure are as follow:</p>
@@ -58,12 +59,12 @@ Once the class is initialized, the main steps of the procedure are as follow:</p
 <li><p>Finally the output for the given pixel is stored (<code class="docutils literal notranslate"><span class="pre">write_output</span></code>)</p></li>
 </ul>
 </div></blockquote>
-</div>
-<div class="section" id="module-kf.KF_class">
+</section>
+<section id="module-kf.KF_class">
 <span id="functions"></span><h3><span class="section-number">4.2.2. </span>Functions<a class="headerlink" href="#module-kf.KF_class" title="Permalink to this headline">¶</a></h3>
-<dl class="class">
-<dt id="kf.KF_class.Kalman">
-<em class="property">class </em><code class="sig-prename descclassname">kf.KF_class.</code><code class="sig-name descname">Kalman</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">fctmod</em>, <em class="sig-param">j=0</em>, <em class="sig-param">i=0</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.KF_class.</span></span><span class="sig-name descname"><span class="pre">Kalman</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fctmod</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">j</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">i</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class for a Kalman filter for an InSAR time series analysis
 Initialize the object</p>
 <ul class="simple">
@@ -88,9 +89,9 @@ Initialize the object</p>
 </dl>
 </li>
 </ul>
-<dl class="method">
-<dt id="kf.KF_class.Kalman.check_fit">
-<code class="sig-name descname">check_fit</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">P</em>, <em class="sig-param">eps_interf=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.check_fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.check_fit" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.check_fit">
+<span class="sig-name descname"><span class="pre">check_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps_interf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.check_fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.check_fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check quality of fit of phases if verbose activated. 
 Compute residual weighted by its Covariance for analysed state 
 and print warning if pb</p>
@@ -103,9 +104,9 @@ and print warning if pb</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.create_H_R_and_D">
-<code class="sig-name descname">create_H_R_and_D</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">indxs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.create_H_R_and_D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.create_H_R_and_D" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.create_H_R_and_D">
+<span class="sig-name descname"><span class="pre">create_H_R_and_D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indxs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.create_H_R_and_D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.create_H_R_and_D" title="Permalink to this definition">¶</a></dt>
 <dd><p>Produce the measurement vector (D), the measurement matrix (H), and 
 the measurement covariance matrix (R) at a specific timestep (0≤ k &lt;N) 
 –&gt; if len(D)=n for this timestep, then H will be (n x (L+k+1)) and R (n x n)</p>
@@ -123,9 +124,9 @@ the measurement covariance matrix (R) at a specific timestep (0≤ k &lt;N)
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.create_Q">
-<code class="sig-name descname">create_Q</code><span class="sig-paren">(</span><em class="sig-param">m_err</em>, <em class="sig-param">phi_err</em>, <em class="sig-param">add_err</em>, <em class="sig-param">M</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.create_Q"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.create_Q" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.create_Q">
+<span class="sig-name descname"><span class="pre">create_Q</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m_err</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_err</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_err</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.create_Q"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.create_Q" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create process covariance Q from uncertainty on model (m_err)
 and interferograms (phi_err) at kth time.</p>
 <ul class="simple">
@@ -152,9 +153,9 @@ and interferograms (phi_err) at kth time.</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.detect_event">
-<code class="sig-name descname">detect_event</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">kmod</em>, <em class="sig-param">m_all</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.detect_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.detect_event" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.detect_event">
+<span class="sig-name descname"><span class="pre">detect_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmod</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m_all</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.detect_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.detect_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>IN PROGRESS TESTED ON SYNTHETIC DATA
 Add model parameter for unexpected events not in model</p>
 <ul class="simple">
@@ -171,9 +172,9 @@ Add model parameter for unexpected events not in model</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.expend_m_P">
-<code class="sig-name descname">expend_m_P</code><span class="sig-paren">(</span><em class="sig-param">L</em>, <em class="sig-param">n</em>, <em class="sig-param">PL</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.expend_m_P"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.expend_m_P" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.expend_m_P">
+<span class="sig-name descname"><span class="pre">expend_m_P</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PL</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.expend_m_P"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.expend_m_P" title="Permalink to this definition">¶</a></dt>
 <dd><p>Open state vector and covariance (m and P) to add building parameters</p>
 <ul class="simple">
 <li><dl class="simple">
@@ -194,26 +195,26 @@ Add model parameter for unexpected events not in model</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.get_model_from_num_of_param">
-<code class="sig-name descname">get_model_from_num_of_param</code><span class="sig-paren">(</span><em class="sig-param">N</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.get_model_from_num_of_param"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.get_model_from_num_of_param" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.get_model_from_num_of_param">
+<span class="sig-name descname"><span class="pre">get_model_from_num_of_param</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.get_model_from_num_of_param"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.get_model_from_num_of_param" title="Permalink to this definition">¶</a></dt>
 <dd><p>Truncate model if the number of parameters in the input (N)
 is smaller than the maximum number of parameters as predicted 
 by the initial functional model (self.Lref). 
 N (or equivalently self.L) may increase with latter iterations</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.innovation">
-<code class="sig-name descname">innovation</code><span class="sig-paren">(</span><em class="sig-param">Xf</em>, <em class="sig-param">Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.innovation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.innovation" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.innovation">
+<span class="sig-name descname"><span class="pre">innovation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.innovation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.innovation" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute residual or innovation vector
 Innovation for phases is not informative. After a few steps,
 reflects noise of data around model.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.kf">
-<code class="sig-name descname">kf</code><span class="sig-paren">(</span><em class="sig-param">m_err</em>, <em class="sig-param">phi_err</em>, <em class="sig-param">add_err</em>, <em class="sig-param">t_sep=6</em>, <em class="sig-param">plots=True</em>, <em class="sig-param">cm='jet'</em>, <em class="sig-param">ax1=0</em>, <em class="sig-param">ax2=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.kf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.kf" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.kf">
+<span class="sig-name descname"><span class="pre">kf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m_err</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_err</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_err</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'jet'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.kf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.kf" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run kalman filter combining other functions of class (i.e. MAIN)</p>
 <ul>
 <li><dl class="simple">
@@ -261,28 +262,28 @@ then subsequent parameters must be specified</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.plot_gain">
-<code class="sig-name descname">plot_gain</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">ax</em>, <em class="sig-param">cmap</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.plot_gain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.plot_gain" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.plot_gain">
+<span class="sig-name descname"><span class="pre">plot_gain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.plot_gain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.plot_gain" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot gain for each parameter over time</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.plot_model">
-<code class="sig-name descname">plot_model</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">ax</em>, <em class="sig-param">cmap</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.plot_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.plot_model" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.plot_model">
+<span class="sig-name descname"><span class="pre">plot_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.plot_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.plot_model" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot resulting model</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.plot_params">
-<code class="sig-name descname">plot_params</code><span class="sig-paren">(</span><em class="sig-param">k</em>, <em class="sig-param">ax</em>, <em class="sig-param">cmap</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.plot_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.plot_params" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.plot_params">
+<span class="sig-name descname"><span class="pre">plot_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.plot_params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.plot_params" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot each parameter over time with its uncertainty in 
 subplots of size len(ax)</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.predict">
-<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">P</em>, <em class="sig-param">A</em>, <em class="sig-param">Q</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.predict" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Q</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.predict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Forecast step</p>
 <ul class="simple">
 <li><dl class="simple">
@@ -308,9 +309,9 @@ subplots of size len(ax)</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.reduce_sizes_m_P">
-<code class="sig-name descname">reduce_sizes_m_P</code><span class="sig-paren">(</span><em class="sig-param">k</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.reduce_sizes_m_P"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.reduce_sizes_m_P" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.reduce_sizes_m_P">
+<span class="sig-name descname"><span class="pre">reduce_sizes_m_P</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.reduce_sizes_m_P"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.reduce_sizes_m_P" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove phases in m if not used to build interferograms and has converged
 For ulterior long baseline interferograms, phase and associated standard deviation 
 can be recovered but state Covariance terms are lost (too heavy to store)</p>
@@ -323,9 +324,9 @@ can be recovered but state Covariance terms are lost (too heavy to store)</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.restart_from_file">
-<code class="sig-name descname">restart_from_file</code><span class="sig-paren">(</span><em class="sig-param">fin</em>, <em class="sig-param">pasttime</em>, <em class="sig-param">indxs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.restart_from_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.restart_from_file" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.restart_from_file">
+<span class="sig-name descname"><span class="pre">restart_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pasttime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indxs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.restart_from_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.restart_from_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Extract initial condition from OPENED infile (fin)  which stores previously 
 computed mk and Pk for all pixels including pixel[i,j]</p>
 <ul class="simple">
@@ -347,9 +348,9 @@ computed mk and Pk for all pixels including pixel[i,j]</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.start_new">
-<code class="sig-name descname">start_new</code><span class="sig-paren">(</span><em class="sig-param">m0</em>, <em class="sig-param">P0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.start_new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.start_new" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.start_new">
+<span class="sig-name descname"><span class="pre">start_new</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.start_new"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.start_new" title="Permalink to this definition">¶</a></dt>
 <dd><p>Start from skratches</p>
 <ul class="simple">
 <li><dl class="simple">
@@ -366,15 +367,15 @@ element of the model will be kept (in the order given in the model vector)</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.title_labels">
-<code class="sig-name descname">title_labels</code><span class="sig-paren">(</span><em class="sig-param">ax1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.title_labels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.title_labels" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.title_labels">
+<span class="sig-name descname"><span class="pre">title_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.title_labels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.title_labels" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add axes label and titles for subplots from plot_params and plot gain functions</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.update">
-<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param">Xf</em>, <em class="sig-param">Pf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.update" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Pf</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.update" title="Permalink to this definition">¶</a></dt>
 <dd><ul class="simple">
 <li><dl class="simple">
 <dt>Xf<span class="classifier">array  </span></dt><dd><p>forecast mean of the state</p>
@@ -389,9 +390,9 @@ element of the model will be kept (in the order given in the model vector)</p>
 </ul>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.KF_class.Kalman.write_output">
-<code class="sig-name descname">write_output</code><span class="sig-paren">(</span><em class="sig-param">outstates</em>, <em class="sig-param">outphase</em>, <em class="sig-param">outupdate=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.write_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.KF_class.Kalman.write_output" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.KF_class.Kalman.write_output">
+<span class="sig-name descname"><span class="pre">write_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outstates</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outphase</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outupdate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/KF_class.html#Kalman.write_output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.KF_class.Kalman.write_output" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save outputs of kalman filter for next run</p>
 <ul class="simple">
 <li><dl class="simple">
@@ -414,9 +415,9 @@ element of the model will be kept (in the order given in the model vector)</p>
 
 </dd></dl>
 
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
           </div>
@@ -447,7 +448,7 @@ element of the model will be kept (in the order given in the model vector)</p>
 
 
 <h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="intro.html">1. Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow.html">2. KFTS-InSAR Workflow</a></li>
@@ -474,7 +475,7 @@ element of the model will be kept (in the order given in the model vector)</p>
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
@@ -496,7 +497,7 @@ element of the model will be kept (in the order given in the model vector)</p>
       &copy;2020, M. Dalaison & R. Jolivet.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

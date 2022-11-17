@@ -1,18 +1,17 @@
 
-
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Index &#8212; KFTS-InSAR 0.0.1 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" />
    
@@ -39,9 +38,11 @@
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#I"><strong>I</strong></a>
  | <a href="#K"><strong>K</strong></a>
+ | <a href="#M"><strong>M</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
@@ -56,6 +57,10 @@
       <li><a href="test.html#kf.utils.createinput.SynteticKF.build_R">build_R() (kf.utils.createinput.SynteticKF method)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="fmt.html#prepare_input.BuildStack">BuildStack (class in prepare_input)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="C">C</h2>
@@ -67,12 +72,14 @@
 </li>
       <li><a href="func.html#kf.timefunction.TimeFct.comp_phase_shift">comp_phase_shift() (kf.timefunction.TimeFct method)</a>
 </li>
-      <li><a href="func.html#kf.timefunction.TimeFct.create_A">create_A() (kf.timefunction.TimeFct method)</a>
+      <li><a href="fmt.html#prepare_input.BuildStack.ConnectMatrix">ConnectMatrix() (prepare_input.BuildStack method)</a>
 </li>
-      <li><a href="kal.html#kf.KF_class.Kalman.create_H_R_and_D">create_H_R_and_D() (kf.KF_class.Kalman method)</a>
+      <li><a href="func.html#kf.timefunction.TimeFct.create_A">create_A() (kf.timefunction.TimeFct method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="kal.html#kf.KF_class.Kalman.create_H_R_and_D">create_H_R_and_D() (kf.KF_class.Kalman method)</a>
+</li>
       <li><a href="test.html#kf.utils.createinput.SynteticKF.create_interfero">create_interfero() (kf.utils.createinput.SynteticKF method)</a>
 </li>
       <li><a href="kal.html#kf.KF_class.Kalman.create_Q">create_Q() (kf.KF_class.Kalman method)</a>
@@ -89,10 +96,14 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="kal.html#kf.KF_class.Kalman.detect_event">detect_event() (kf.KF_class.Kalman method)</a>
+      <li><a href="fmt.html#prepare_input.BuildStack.datenum">datenum() (prepare_input.BuildStack method)</a>
+</li>
+      <li><a href="fmt.html#prepare_input.BuildStack.deramp">deramp() (prepare_input.BuildStack method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="kal.html#kf.KF_class.Kalman.detect_event">detect_event() (kf.KF_class.Kalman method)</a>
+</li>
       <li><a href="fmt.html#kf.readinput.SetupKF.dividepxls">dividepxls() (kf.readinput.SetupKF method)</a>
 </li>
       <li><a href="func.html#kf.timefunction.TimeFct.draw_model">draw_model() (kf.timefunction.TimeFct method)</a>
@@ -112,6 +123,18 @@
   </ul></td>
 </tr></table>
 
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="func.html#kf.timefunction.TimeFct.find_coeff_lsq">find_coeff_lsq() (kf.timefunction.TimeFct method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="fmt.html#prepare_input.BuildStack.findramp">findramp() (prepare_input.BuildStack method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -123,11 +146,17 @@
         <li><a href="test.html#kf.utils.createinput.SynteticKF.get_interf_pairs">(kf.utils.createinput.SynteticKF method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="func.html#kf.timefunction.TimeFct.get_label">get_label() (kf.timefunction.TimeFct method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="kal.html#kf.KF_class.Kalman.get_model_from_num_of_param">get_model_from_num_of_param() (kf.KF_class.Kalman method)</a>
+</li>
+      <li><a href="fmt.html#prepare_input.getBaselines">getBaselines() (in module prepare_input)</a>
+</li>
+      <li><a href="fmt.html#prepare_input.GetConfig">GetConfig (class in prepare_input)</a>
+</li>
+      <li><a href="fmt.html#prepare_input.getPairs">getPairs() (in module prepare_input)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -135,10 +164,12 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="fmt.html#kf.readinput.initiatefileforKF">initiatefileforKF() (in module kf.readinput)</a>
+      <li><a href="func.html#kf.timefunction.TimeFct.identify_outdated">identify_outdated() (kf.timefunction.TimeFct method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="fmt.html#kf.readinput.initiatefileforKF">initiatefileforKF() (in module kf.readinput)</a>
+</li>
       <li><a href="kal.html#kf.KF_class.Kalman.innovation">innovation() (kf.KF_class.Kalman method)</a>
 </li>
   </ul></td>
@@ -151,20 +182,79 @@
 </li>
       <li><a href="kal.html#kf.KF_class.Kalman.kf">kf() (kf.KF_class.Kalman method)</a>
 </li>
-      <li><a href="kal.html#module-kf.KF_class">kf.KF_class (module)</a>
+      <li>
+    kf.KF_class
+
+      <ul>
+        <li><a href="kal.html#module-kf.KF_class">module</a>
 </li>
-      <li><a href="fmt.html#module-kf.readinput">kf.readinput (module)</a>, <a href="fmt.html#module-kf.readinput">[1]</a>
+      </ul></li>
+      <li>
+    kf.readinput
+
+      <ul>
+        <li><a href="fmt.html#module-0">module</a>, <a href="fmt.html#module-kf.readinput">[1]</a>
 </li>
+      </ul></li>
+      <li>
+    kf.timefunction
+
+      <ul>
+        <li><a href="func.html#module-kf.timefunction">module</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="func.html#module-kf.timefunction">kf.timefunction (module)</a>
+      <li>
+    kf.utils.createinput
+
+      <ul>
+        <li><a href="test.html#module-kf.utils.createinput">module</a>
 </li>
-      <li><a href="test.html#module-kf.utils.createinput">kf.utils.createinput (module)</a>
+      </ul></li>
+      <li>
+    kf.utils.generateRnAtmo
+
+      <ul>
+        <li><a href="test.html#module-kf.utils.generateRnAtmo">module</a>
 </li>
-      <li><a href="test.html#module-kf.utils.generateRnAtmo">kf.utils.generateRnAtmo (module)</a>
+      </ul></li>
+      <li>
+    kfts
+
+      <ul>
+        <li><a href="flow.html#module-kfts">module</a>
 </li>
-      <li><a href="flow.html#module-kfts">kfts (module)</a>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="fmt.html#prepare_input.makefnames">makefnames() (in module prepare_input)</a>
 </li>
+      <li><a href="fmt.html#kf.readinput.SetupKF.mintpy2kfts">mintpy2kfts() (kf.readinput.SetupKF method)</a>
+</li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="kal.html#module-kf.KF_class">kf.KF_class</a>
+</li>
+        <li><a href="fmt.html#module-0">kf.readinput</a>, <a href="fmt.html#module-kf.readinput">[1]</a>
+</li>
+        <li><a href="func.html#module-kf.timefunction">kf.timefunction</a>
+</li>
+        <li><a href="test.html#module-kf.utils.createinput">kf.utils.createinput</a>
+</li>
+        <li><a href="test.html#module-kf.utils.generateRnAtmo">kf.utils.generateRnAtmo</a>
+</li>
+        <li><a href="flow.html#module-kfts">kfts</a>
+</li>
+        <li><a href="fmt.html#module-prepare_input">prepare_input</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -175,12 +265,19 @@
 </li>
       <li><a href="kal.html#kf.KF_class.Kalman.plot_model">plot_model() (kf.KF_class.Kalman method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="kal.html#kf.KF_class.Kalman.plot_params">plot_params() (kf.KF_class.Kalman method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="kal.html#kf.KF_class.Kalman.predict">predict() (kf.KF_class.Kalman method)</a>
 </li>
+      <li>
+    prepare_input
+
+      <ul>
+        <li><a href="fmt.html#module-prepare_input">module</a>
+</li>
+      </ul></li>
       <li><a href="fmt.html#kf.readinput.SetupKF.pxl_with_nodata">pxl_with_nodata() (kf.readinput.SetupKF method)</a>
 </li>
   </ul></td>
@@ -191,10 +288,16 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="kal.html#kf.KF_class.Kalman.reduce_sizes_m_P">reduce_sizes_m_P() (kf.KF_class.Kalman method)</a>
 </li>
-      <li><a href="fmt.html#kf.readinput.reopenfileforKF">reopenfileforKF() (in module kf.readinput)</a>
+      <li><a href="fmt.html#prepare_input.BuildStack.referenceIgram">referenceIgram() (prepare_input.BuildStack method)</a>
+</li>
+      <li><a href="func.html#kf.timefunction.TimeFct.remove_oldstuff">remove_oldstuff() (kf.timefunction.TimeFct method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="fmt.html#prepare_input.BuildStack.removeramp">removeramp() (prepare_input.BuildStack method)</a>
+</li>
+      <li><a href="fmt.html#kf.readinput.reopenfileforKF">reopenfileforKF() (in module kf.readinput)</a>
+</li>
       <li><a href="kal.html#kf.KF_class.Kalman.restart_from_file">restart_from_file() (kf.KF_class.Kalman method)</a>
 </li>
       <li><a href="flow.html#kfts.RunKalmanFilter">RunKalmanFilter (class in kfts)</a>
@@ -205,16 +308,18 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="fmt.html#prepare_input.save2file">save2file() (in module prepare_input)</a>
+</li>
       <li><a href="fmt.html#kf.readinput.SetupKF.select_pxl_band">select_pxl_band() (kf.readinput.SetupKF method)</a>
 </li>
       <li><a href="fmt.html#kf.readinput.SetupKF">SetupKF (class in kf.readinput)</a>
 </li>
       <li><a href="func.html#kf.timefunction.TimeFct.shift_t0">shift_t0() (kf.timefunction.TimeFct method)</a>
 </li>
-      <li><a href="test.html#kf.utils.createinput.SynteticKF.slice_data">slice_data() (kf.utils.createinput.SynteticKF method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="test.html#kf.utils.createinput.SynteticKF.slice_data">slice_data() (kf.utils.createinput.SynteticKF method)</a>
+</li>
       <li><a href="fmt.html#kf.readinput.SetupKF.spatial_grid">spatial_grid() (kf.readinput.SetupKF method)</a>
 </li>
       <li><a href="kal.html#kf.KF_class.Kalman.start_new">start_new() (kf.KF_class.Kalman method)</a>
@@ -288,7 +393,7 @@
 
 
 <h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="intro.html">1. Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow.html">2. KFTS-InSAR Workflow</a></li>
@@ -309,7 +414,7 @@
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
@@ -331,7 +436,7 @@
       &copy;2020, M. Dalaison & R. Jolivet.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
     </div>

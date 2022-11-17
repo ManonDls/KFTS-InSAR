@@ -13,6 +13,11 @@ import numpy as np
 import h5py, sys
 import datetime as dt
 
+#local load only to convert MintPy format
+from prepare_input import BuildStack
+
+#os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
 ###########################################################################
 # WORK FROM DATA
 class Subregion():
@@ -24,7 +29,7 @@ class Subregion():
 
 class SetupKF(object):
 
-    def __init__(self, h5file, fmt='ISCE', mpi=False, mpiarg=0, verbose=True, subregion=None):
+    def __init__(self, h5file, fmt='ISCE', comm=False, mpiarg=0, verbose=True, subregion=None):
         '''
         Class for reading and modifying interferograms for Kalman filtering.
             :h5file: .h5 file path containing
@@ -35,25 +40,35 @@ class SetupKF(object):
                 - links : connection between phases to build interfero (M x N), 0 1 and -1
                 - bperp : perpendicular baseline between aquisitions (not exploited yet)
         Opts:
-            :fmt:    format of H5file input, default is 'ISCE'
+            :fmt:    format of H5file input, default is 'ISCE' (also 'RAW' 'MintPy')
             :mpi:    do you use parallel features of mpi4py (True or False, default False)
             :mpiarg: precise rank and size of communicator (tuple used if mpi=True)
         '''
         
+        if comm == False:
+            mpi=False
+            self.rank = 0
+        else : 
+            mpi=True
+        
         self.verbose = verbose
         
         ## Import and read Data
-        if fmt == 'ISCE':
+        if fmt.upper() == 'ISCE':
             intrfname = 'figram'
-        elif fmt == 'RAW':
+        elif fmt.upper() == 'RAW':
             intrfname = 'igram'
-        elif fmt == 'Etna':
-            intrfname = 'igram_aps'
-        
+        elif fmt.upper() == 'MINTPY':
+            #Select info from ifgramStack
+            intrfname = 'unwrapPhase'
         else :
-            assert False,'Format of H5file not known'
+            assert False,"Specified format {} of H5file not known".format(fmt)
         
-        fin = h5py.File(h5file,'r') #dictionary
+        if not mpi :
+            fin = h5py.File(h5file,'r') #dictionary
+        else : 
+            fin = h5py.File(h5file,'r',driver='mpio',comm=comm)
+
         self.Ny, self.Nx = np.shape(fin[intrfname])[1:]
         self.igram       = fin[intrfname]
         
@@ -64,11 +79,16 @@ class SetupKF(object):
                         ymin = subregion.y1, ymax = subregion.y2, truncate = True)
         
         self.dividepxls(mpi,mpiarg)
-
-        self.time        = fin['tims'][:]
-        self.links       = fin['Jmat'][:]                              #2D (interf,time)
-        self.bperp       = fin['bperp'][:]                             #perpendicular baseline (interf)
-        self.orddates    = fin['dates'][:].astype(int)
+        
+        
+        if  fmt.upper() == 'MINTPY':
+            self.bperp       = fin['bperp'][:]              
+            self.mintpy2kfts(fin)
+        else : 
+            self.time        = fin['tims'][:]                       #time in decimal year wrt start 
+            self.links       = fin['Jmat'][:]                       #2D (interf,time)
+            self.bperp       = fin['bperp'][:]                      #perpendicular baseline (interf)
+            self.orddates    = fin['dates'][:].astype(int)          #ordinal dates
         
         if subregion is None: 
             self.igram   = fin[intrfname][:,self.miny:self.maxy,:]     #3D (interf,y,x)
@@ -173,6 +193,27 @@ class SetupKF(object):
             self.Ntot = ny
 
         return x,y
+
+
+    def mintpy2kfts(self,fin,verbose=True):
+        '''
+        Read and translate information in the hDF5 output of MintPy named ifgramStack.h5
+        Essentially reformat dates and build matrix mapping interferogram to time
+            :fin:  open HDF5 file 
+        '''
+        
+        # initialize class 
+        ylims,xlims = (0,-1), (0,-1)
+        stack = BuildStack(verbose,ylims,xlims)
+        
+        # read date strings 
+        datestrings = fin['date'][:]
+ 
+        stack.ConnectMatrix(datestrings.astype(str))
+        self.links = stack.Jmat     # get matrix
+        self.orddates = stack.days.astype(int)  # ordinal dates 
+        self.time = (stack.days-stack.days[0])/365.25    # decimal years 
+        
         
     def pxl_with_nodata(self,thres=30, chunks=200, plot=False) :
         '''
@@ -317,7 +358,7 @@ def kdelta(i,j):
         
 
 def initiatefileforKF(statefile, phasefile, L, data, model, store, 
-                           updtfile=None, comm=False, toverlap=0, t_sep= None):
+                           updtfile=None, comm=False, toverlap=0, tshift=1, t_sep= None):
     '''
     Open h5py file for kalman filter.
         :statefile: file name and location 
@@ -328,9 +369,12 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
         :updtfile:  file name to store additional statistics about KF analysis
         :comm:      communicator if MPI used (e.g. MPI.COMM_WORLD)
         :toverlap:  number of overlaping timesteps with past solution (only if restart KF)
+        :tshift:    number of previously estimated phases (may be updated)
     '''
-        
-    lent = data.time.shape[0]
+    
+   
+    lent = data.time.shape[0] + toverlap #length of saved record for latter update
+    newt = lent - tshift                 #length of new optimized time steps
     Ny, Nx = data.Ntot, data.Nx
     m_err, sig_eps, sig_gam  = store
     
@@ -389,18 +433,17 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
     idx = fphases.create_dataset('idx0',data=0)
     idx.attrs['help'] = 'Index of first phase in file with respect to first reference date of time series'
     
-    if updtfile is not None:
-        # Save part of the innovation and Gain to have information 
-        # about the predictive power of the model 
-        innv = fupdt.create_dataset('mean_innov',(Ny,Nx,lent-toverlap),'f')
-        innv.attrs['help'] = 'Mean innovation (or residual) for the last phase estimate at each time step'
-
-        # about the convergence and sensitivity to data of model parameters
-        gain = fupdt.create_dataset('param_gain',(Ny,Nx,lent-toverlap,L),'f')
-        gain.attrs['help'] = 'Norm of the gain for the L model parameters at each time step'
-
-        return fstates,fphases,fupdt
+    # Save part of the innovation and Gain to have information 
+    # about the predictive power of the model 
+    innv = fupdt.create_dataset('mean_innov',(Ny,Nx,newt),'f')
+    innv.attrs['help'] = 'Mean innovation (or residual) for the last phase estimate at each time step'
     
+    # about the convergence and sensitivity to data of model parameters
+    gain = fupdt.create_dataset('param_gain',(Ny,Nx,newt,L),'f')
+    gain.attrs['help'] = 'Norm of the gain for the L model parameters at each time step'
+
+    if updtfile is not None:
+        return fstates,fphases,fupdt
     else :
         return fstates,fphases
 

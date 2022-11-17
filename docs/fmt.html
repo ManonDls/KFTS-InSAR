@@ -1,17 +1,18 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
     <title>5. Setup and formating for KF &#8212; KFTS-InSAR 0.0.1 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="6. Create synthetic data" href="test.html" />
@@ -32,46 +33,197 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="setup-and-formating-for-kf">
+  <section id="setup-and-formating-for-kf">
 <h1><span class="section-number">5. </span>Setup and formating for KF<a class="headerlink" href="#setup-and-formating-for-kf" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="module-kf.readinput">
+<section id="prepare-inputs">
+<h2><span class="section-number">5.1. </span>Prepare inputs<a class="headerlink" href="#prepare-inputs" title="Permalink to this headline">¶</a></h2>
+<p>KFTS-InSAR reads an HDF5 file containing the interferogram stack. It can contain the following dataset, although other format are suported, for <em>N</em> interferograms of (<em>Y</em>, <em>X</em>) pixels linking <em>M</em> acquisitions</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">Jmat</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{N,</span> <span class="pre">M}</span>&#160;&#160;&#160;&#160; <span class="pre">Connectivity</span> <span class="pre">matrix</span> <span class="pre">[-1,1,0]</span>
+<span class="pre">bperp</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{N}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Perpendicular</span> <span class="pre">baseline</span> <span class="pre">array</span> <span class="pre">(not</span> <span class="pre">used</span> <span class="pre">by</span> <span class="pre">KFTS</span> <span class="pre">yet)</span>
+<span class="pre">dates</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Array</span> <span class="pre">of</span> <span class="pre">ordinal</span> <span class="pre">values</span> <span class="pre">for</span> <span class="pre">SAR</span> <span class="pre">acquisition</span> <span class="pre">dates</span>
+<span class="pre">figram</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{N,</span> <span class="pre">Y,</span> <span class="pre">X}</span>&#160; <span class="pre">Array</span> <span class="pre">of</span> <span class="pre">interferograms</span>
+<span class="pre">tims</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Array</span> <span class="pre">of</span> <span class="pre">SAR</span> <span class="pre">acquisition</span> <span class="pre">times</span> <span class="pre">in</span> <span class="pre">decimal</span> <span class="pre">years</span>
+<span class="pre">`</span></code>
+.. note:: KFTS is able to read <code class="docutils literal notranslate"><span class="pre">MintPy</span></code> ifgramStack file.</p>
+<span class="target" id="module-prepare_input"></span><dl class="py class">
+<dt class="sig sig-object py" id="prepare_input.BuildStack">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prepare_input.</span></span><span class="sig-name descname"><span class="pre">BuildStack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlims</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#BuildStack"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.BuildStack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Quick class to deal with stack of interferogram</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="prepare_input.BuildStack.ConnectMatrix">
+<span class="sig-name descname"><span class="pre">ConnectMatrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dates</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#BuildStack.ConnectMatrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.BuildStack.ConnectMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the connectivity matrix for given set of IFGs.
+Args:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>dates        -&gt;  List of pairs of strings</p></li>
+</ul>
+</div></blockquote>
+<dl class="simple">
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>Uts          -&gt; Unique dates of acquisitions</p></li>
+<li><p>connMat      -&gt; Connectivity matrix (1,-1,0)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prepare_input.BuildStack.datenum">
+<span class="sig-name descname"><span class="pre">datenum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datelist</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#BuildStack.datenum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.BuildStack.datenum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts list of dates in yymmdd/yyyymmdd format to ordinal array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prepare_input.BuildStack.deramp">
+<span class="sig-name descname"><span class="pre">deramp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[(0,</span> <span class="pre">0)]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#BuildStack.deramp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.BuildStack.deramp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Network deramping of the stack of interferograms. Used when no GPS 
+is available.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>out       Output stack object</p></li>
+</ul>
+</dd>
+<dt>Kwargs:</dt><dd><ul class="simple">
+<li><p>network   Network deramping or individual deramping</p></li>
+<li><p>poly      Polynomial code for deramping</p></li>
+<li><dl class="simple">
+<dt>dref      Coordinates of points delimiting a polygon taken </dt><dd><p>as the reference region for estimating a ramp
+(list of 2-tuple)</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prepare_input.BuildStack.findramp">
+<span class="sig-name descname"><span class="pre">findramp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#BuildStack.findramp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.BuildStack.findramp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimate the best-fitting ramp parameters for a matrix.
+Args:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>phs     -  Input unwrapped phase matrix.</p></li>
+<li><p>mask    -  Mask of reliable values.</p></li>
+<li><dl class="simple">
+<dt>poly    -  Integer flag for type of correction.</dt><dd><p>1 - Constant
+3 - Plane
+4 - Plane + cross term</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+<dl class="simple">
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>ramppoly - Polynomial corresponding to the rank</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prepare_input.BuildStack.referenceIgram">
+<span class="sig-name descname"><span class="pre">referenceIgram</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#BuildStack.referenceIgram"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.BuildStack.referenceIgram" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove for each single 2D interfero phs</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prepare_input.BuildStack.removeramp">
+<span class="sig-name descname"><span class="pre">removeramp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ramppoly</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#BuildStack.removeramp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.BuildStack.removeramp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deramp a matrix with the given ramp polynomial.
+.. Args:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>phs             Input matrix</p></li>
+<li><p>ramppoly        Ramp polynomial</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="prepare_input.GetConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prepare_input.</span></span><span class="sig-name descname"><span class="pre">GetConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">configfile</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#GetConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.GetConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to run read config file and keep everything in object</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="prepare_input.getBaselines">
+<span class="sig-prename descclassname"><span class="pre">prepare_input.</span></span><span class="sig-name descname"><span class="pre">getBaselines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baselineDir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masterDate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#getBaselines"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.getBaselines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get baseline values from baseline files.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="prepare_input.getPairs">
+<span class="sig-prename descclassname"><span class="pre">prepare_input.</span></span><span class="sig-name descname"><span class="pre">getPairs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">igramsDir</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#getPairs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.getPairs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the two dates of each interferogram
+produced by ISCE, in Igram directory.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="prepare_input.makefnames">
+<span class="sig-prename descclassname"><span class="pre">prepare_input.</span></span><span class="sig-name descname"><span class="pre">makefnames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dates1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dates2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#makefnames"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.makefnames" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates paths to the files needed for creating the stack.
+.. Args:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>dates1     - Date of master</p></li>
+<li><p>dates2     - Date of slave</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="prepare_input.save2file">
+<span class="sig-prename descclassname"><span class="pre">prepare_input.</span></span><span class="sig-name descname"><span class="pre">save2file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dates1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dates2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dateList</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baselineList</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">satnameList</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#save2file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.save2file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save baselines to a file.
+It can be used for GIAnT time series analysis.</p>
+</dd></dl>
+
+</section>
+<section id="module-kf.readinput">
 <span id="read-and-formate-data"></span><h2><span class="section-number">5.2. </span>Read and formate data<a class="headerlink" href="#module-kf.readinput" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="kf.readinput.SetupKF">
-<em class="property">class </em><code class="sig-prename descclassname">kf.readinput.</code><code class="sig-name descname">SetupKF</code><span class="sig-paren">(</span><em class="sig-param">h5file</em>, <em class="sig-param">fmt='ISCE'</em>, <em class="sig-param">mpi=False</em>, <em class="sig-param">mpiarg=0</em>, <em class="sig-param">verbose=True</em>, <em class="sig-param">subregion=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">SetupKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ISCE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpiarg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subregion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Class for reading and modifying interferograms for Kalman filtering.</dt><dd><dl class="field-list simple">
-<dt class="field-odd">h5file</dt>
+<dt class="field-odd">h5file<span class="colon">:</span></dt>
 <dd class="field-odd"><p>.h5 file path containing</p>
 <ul class="simple">
 <li><p>time  : decimal dates relative to first acquisition (usually in years)</p></li>
 <li><p>dates : absolute data</p></li>
 <li><p>igram : interferograms</p></li>
 <li><p>links : connection between phases to build interfero (M x N), 0 1 and -1</p></li>
-<li><p>bperp : perpendicular baseline between aquisitions</p></li>
+<li><p>bperp : perpendicular baseline between aquisitions (not exploited yet)</p></li>
 </ul>
 </dd>
 </dl>
 </dd>
 <dt>Opts:</dt><dd><dl class="field-list simple">
-<dt class="field-odd">fmt</dt>
-<dd class="field-odd"><p>format of H5file input, default is ‘ISCE’</p>
+<dt class="field-odd">fmt<span class="colon">:</span></dt>
+<dd class="field-odd"><p>format of H5file input, default is ‘ISCE’ (also ‘RAW’ ‘MintPy’)</p>
 </dd>
-<dt class="field-even">mpi</dt>
+<dt class="field-even">mpi<span class="colon">:</span></dt>
 <dd class="field-even"><p>do you use parallel features of mpi4py (True or False, default False)</p>
 </dd>
-<dt class="field-odd">mpiarg</dt>
+<dt class="field-odd">mpiarg<span class="colon">:</span></dt>
 <dd class="field-odd"><p>precise rank and size of communicator (tuple used if mpi=True)</p>
 </dd>
 </dl>
 </dd>
 </dl>
-<dl class="method">
-<dt id="kf.readinput.SetupKF.create_R">
-<code class="sig-name descname">create_R</code><span class="sig-paren">(</span><em class="sig-param">rr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.create_R"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.create_R" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.create_R">
+<span class="sig-name descname"><span class="pre">create_R</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.create_R"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.create_R" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Create covariance matrix of data </dt><dd><dl class="field-list simple">
-<dt class="field-odd">rr</dt>
+<dt class="field-odd">rr<span class="colon">:</span></dt>
 <dd class="field-odd"><p>variance in observation (=interferograms) noise (float)</p>
 </dd>
 </dl>
@@ -79,15 +231,15 @@
 </dl>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.readinput.SetupKF.dividepxls">
-<code class="sig-name descname">dividepxls</code><span class="sig-paren">(</span><em class="sig-param">mpi</em>, <em class="sig-param">mpiarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.dividepxls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.dividepxls" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.dividepxls">
+<span class="sig-name descname"><span class="pre">dividepxls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mpi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpiarg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.dividepxls"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.dividepxls" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if MPI used and divide pxls into subsets for different workers</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.readinput.SetupKF.get_interf_pairs">
-<code class="sig-name descname">get_interf_pairs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.get_interf_pairs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.get_interf_pairs" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.get_interf_pairs">
+<span class="sig-name descname"><span class="pre">get_interf_pairs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.get_interf_pairs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.get_interf_pairs" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Extract indices of phases substracted together to build interfero.</dt><dd><ul class="simple">
 <li><p>imoins : indice of phases substracted to iplus (M)</p></li>
@@ -97,21 +249,35 @@
 </dl>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.readinput.SetupKF.pxl_with_nodata">
-<code class="sig-name descname">pxl_with_nodata</code><span class="sig-paren">(</span><em class="sig-param">thres=30</em>, <em class="sig-param">chunks=200</em>, <em class="sig-param">plot=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.pxl_with_nodata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.pxl_with_nodata" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.mintpy2kfts">
+<span class="sig-name descname"><span class="pre">mintpy2kfts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.mintpy2kfts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.mintpy2kfts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read and translate information in the hDF5 output of MintPy named ifgramStack.h5
+Essentially reformat dates and build matrix mapping interferogram to time</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">fin<span class="colon">:</span></dt>
+<dd class="field-odd"><p>open HDF5 file</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.pxl_with_nodata">
+<span class="sig-name descname"><span class="pre">pxl_with_nodata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thres</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.pxl_with_nodata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.pxl_with_nodata" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Check for pixels with little data and build mask.</dt><dd><dl class="field-list simple">
-<dt class="field-odd">xv,yv</dt>
+<dt class="field-odd">xv,yv<span class="colon">:</span></dt>
 <dd class="field-odd"><p>grid element</p>
 </dd>
 </dl>
 </dd>
 <dt>Opts:</dt><dd><dl class="field-list simple">
-<dt class="field-odd">thres</dt>
+<dt class="field-odd">thres<span class="colon">:</span></dt>
 <dd class="field-odd"><p>minimum number of interferogram required to be available for one pixel</p>
 </dd>
-<dt class="field-even">chunks</dt>
+<dt class="field-even">chunks<span class="colon">:</span></dt>
 <dd class="field-even"><p>chunks of columns to be processed simultaneously</p>
 </dd>
 </dl>
@@ -123,24 +289,24 @@
 </dl>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.readinput.SetupKF.select_pxl_band">
-<code class="sig-name descname">select_pxl_band</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">slope</em>, <em class="sig-param">Xoff1</em>, <em class="sig-param">Xoff2</em>, <em class="sig-param">xmin=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.select_pxl_band"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.select_pxl_band" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.select_pxl_band">
+<span class="sig-name descname"><span class="pre">select_pxl_band</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Xoff1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Xoff2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.select_pxl_band"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.select_pxl_band" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Chose subset around fault between two parallel lines (X = slope*Y + off).</dt><dd><dl class="field-list simple">
-<dt class="field-odd">slope</dt>
+<dt class="field-odd">slope<span class="colon">:</span></dt>
 <dd class="field-odd"><p>slope of bounds for X as a function of Y (float)</p>
 </dd>
-<dt class="field-even">Xoff1</dt>
+<dt class="field-even">Xoff1<span class="colon">:</span></dt>
 <dd class="field-even"><p>offset in minimum line (float)</p>
 </dd>
-<dt class="field-odd">Xoff2</dt>
+<dt class="field-odd">Xoff2<span class="colon">:</span></dt>
 <dd class="field-odd"><p>offset in maximum line (Xoff2 &gt; Xoff1)</p>
 </dd>
 </dl>
 </dd>
 <dt>Opt:</dt><dd><dl class="field-list simple">
-<dt class="field-odd">xmin</dt>
+<dt class="field-odd">xmin<span class="colon">:</span></dt>
 <dd class="field-odd"><p>if nonzero in spatial_grid function need to specify its value</p>
 </dd>
 </dl>
@@ -149,17 +315,17 @@
 <p>NOT ADAPTED FOR MPI USE YET</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.readinput.SetupKF.spatial_grid">
-<code class="sig-name descname">spatial_grid</code><span class="sig-paren">(</span><em class="sig-param">xmin=0</em>, <em class="sig-param">xmax=0</em>, <em class="sig-param">ymin=0</em>, <em class="sig-param">ymax=0</em>, <em class="sig-param">truncate=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.spatial_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.spatial_grid" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.spatial_grid">
+<span class="sig-name descname"><span class="pre">spatial_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ymin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ymax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truncate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.spatial_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.spatial_grid" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create spatial grid with possibility of choosing a spatial subset.</p>
 <dl class="simple">
 <dt>Opts:</dt><dd><dl class="field-list simple">
-<dt class="field-odd">xmin,xmax,ymin,ymax</dt>
+<dt class="field-odd">xmin,xmax,ymin,ymax<span class="colon">:</span></dt>
 <dd class="field-odd"><p>indexes delimiting the study area (integers)
 default are all pixels (0,Nx,0,Ny)</p>
 </dd>
-<dt class="field-even">truncate</dt>
+<dt class="field-even">truncate<span class="colon">:</span></dt>
 <dd class="field-even"><p>True or False (for quick testing)</p>
 </dd>
 </dl>
@@ -171,18 +337,18 @@ default are all pixels (0,Nx,0,Ny)</p>
 </dl>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.readinput.SetupKF.summary">
-<code class="sig-name descname">summary</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.summary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.summary" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.summary">
+<span class="sig-name descname"><span class="pre">summary</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.summary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.summary" title="Permalink to this definition">¶</a></dt>
 <dd><p>Print data properties</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kf.readinput.SetupKF.trunc_time">
-<code class="sig-name descname">trunc_time</code><span class="sig-paren">(</span><em class="sig-param">t_num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.trunc_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.SetupKF.trunc_time" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.trunc_time">
+<span class="sig-name descname"><span class="pre">trunc_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t_num</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.trunc_time"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.trunc_time" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Select subset of dates.</dt><dd><dl class="field-list simple">
-<dt class="field-odd">t_num</dt>
+<dt class="field-odd">t_num<span class="colon">:</span></dt>
 <dd class="field-odd"><p>the number of dates to keep at the end of array</p>
 </dd>
 </dl>
@@ -192,51 +358,54 @@ default are all pixels (0,Nx,0,Ny)</p>
 
 </dd></dl>
 
-</div>
-<div class="section" id="module-kf.readinput">
-<span id="create-or-open-storage-file"></span><h2><span class="section-number">5.2. </span>Create or open storage file<a class="headerlink" href="#module-kf.readinput" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="kf.readinput.initiatefileforKF">
-<code class="sig-prename descclassname">kf.readinput.</code><code class="sig-name descname">initiatefileforKF</code><span class="sig-paren">(</span><em class="sig-param">statefile</em>, <em class="sig-param">phasefile</em>, <em class="sig-param">L</em>, <em class="sig-param">data</em>, <em class="sig-param">model</em>, <em class="sig-param">store</em>, <em class="sig-param">updtfile=None</em>, <em class="sig-param">comm=False</em>, <em class="sig-param">toverlap=0</em>, <em class="sig-param">t_sep=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#initiatefileforKF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.initiatefileforKF" title="Permalink to this definition">¶</a></dt>
+</section>
+<section id="module-0">
+<span id="create-or-open-storage-file"></span><h2><span class="section-number">5.3. </span>Create or open storage file<a class="headerlink" href="#module-0" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="kf.readinput.initiatefileforKF">
+<span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">initiatefileforKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">statefile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phasefile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updtfile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">toverlap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tshift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#initiatefileforKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.initiatefileforKF" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Open h5py file for kalman filter.</dt><dd><dl class="field-list simple">
-<dt class="field-odd">statefile</dt>
+<dt class="field-odd">statefile<span class="colon">:</span></dt>
 <dd class="field-odd"><p>file name and location</p>
 </dd>
-<dt class="field-even">phasefile</dt>
+<dt class="field-even">phasefile<span class="colon">:</span></dt>
 <dd class="field-even"><p>file name and location</p>
 </dd>
-<dt class="field-odd">L</dt>
+<dt class="field-odd">L<span class="colon">:</span></dt>
 <dd class="field-odd"><p>number of parameters</p>
 </dd>
-<dt class="field-even">model</dt>
+<dt class="field-even">model<span class="colon">:</span></dt>
 <dd class="field-even"><p>model description in tuple used for timefunction.py</p>
 </dd>
-<dt class="field-odd">store</dt>
+<dt class="field-odd">store<span class="colon">:</span></dt>
 <dd class="field-odd"><p>is a tuple of things to store</p>
 </dd>
-<dt class="field-even">updtfile</dt>
+<dt class="field-even">updtfile<span class="colon">:</span></dt>
 <dd class="field-even"><p>file name to store additional statistics about KF analysis</p>
 </dd>
-<dt class="field-odd">comm</dt>
+<dt class="field-odd">comm<span class="colon">:</span></dt>
 <dd class="field-odd"><p>communicator if MPI used (e.g. MPI.COMM_WORLD)</p>
 </dd>
-<dt class="field-even">toverlap</dt>
+<dt class="field-even">toverlap<span class="colon">:</span></dt>
 <dd class="field-even"><p>number of overlaping timesteps with past solution (only if restart KF)</p>
+</dd>
+<dt class="field-odd">tshift<span class="colon">:</span></dt>
+<dd class="field-odd"><p>number of previously estimated phases (may be updated)</p>
 </dd>
 </dl>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="kf.readinput.reopenfileforKF">
-<code class="sig-prename descclassname">kf.readinput.</code><code class="sig-name descname">reopenfileforKF</code><span class="sig-paren">(</span><em class="sig-param">statefile</em>, <em class="sig-param">phasefile</em>, <em class="sig-param">comm=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#reopenfileforKF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kf.readinput.reopenfileforKF" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="kf.readinput.reopenfileforKF">
+<span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">reopenfileforKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">statefile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phasefile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#reopenfileforKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.reopenfileforKF" title="Permalink to this definition">¶</a></dt>
 <dd><p>Function to reopen file after closure to test readability</p>
 </dd></dl>
 
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -267,15 +436,16 @@ default are all pixels (0,Nx,0,Ny)</p>
 
 
 <h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="intro.html">1. Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flow.html">2. KFTS-InSAR Workflow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="func.html">3. Functional model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="kal.html">4. Kalman Filter</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">5. Setup and formating</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#module-kf.readinput">5.1. Read and formate data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-kf.readinput">5.2. Create or open storage file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prepare-inputs">5.1. Prepare inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-kf.readinput">5.2. Read and formate data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-0">5.3. Create or open storage file</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="test.html">6. Synthetic data</a></li>
@@ -294,7 +464,7 @@ default are all pixels (0,Nx,0,Ny)</p>
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
@@ -316,7 +486,7 @@ default are all pixels (0,Nx,0,Ny)</p>
       &copy;2020, M. Dalaison & R. Jolivet.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

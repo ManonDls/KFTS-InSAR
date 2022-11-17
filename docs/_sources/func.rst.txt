@@ -5,5 +5,5 @@ Setting up the functional model
 
 .. autoclass:: TimeFct
    :members:
-.. note:: This trajectory model is used to make the forecast step of Kalman filtering
+.. note:: This trajectory model is used to make the forecast step of Kalman filtering. It helps fill holes in the interferometric network on a given pixel. If so, the error on the model knownledge will propagate on the estimated phase change uncertainty. It is NOT used to filter the time series of phase change.
 

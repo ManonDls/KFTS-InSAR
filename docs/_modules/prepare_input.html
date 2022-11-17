@@ -1,0 +1,909 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>prepare_input &#8212; KFTS-InSAR 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for prepare_input</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1">##############################################################################</span>
+<span class="c1"># Read and Prepare data for KFTS</span>
+<span class="c1"># Heavily inspired by GIAnT v1.0 (P. Agram &amp; R. Jolivet)</span>
+<span class="c1"># </span>
+<span class="c1"># Construct H5 files containing interfero </span>
+<span class="c1"># and auxiliary files :</span>
+<span class="c1"># lon.flt, lat.flt, inc.flt, head.flt, hgt.flt </span>
+<span class="c1">#</span>
+<span class="c1"># Manon Dalaison</span>
+<span class="c1"># Sept 2022</span>
+<span class="c1">#############################################################################</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">h5py</span>
+<span class="kn">import</span> <span class="nn">datetime</span> <span class="k">as</span> <span class="nn">dt</span>
+<span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">TIME</span> 
+<span class="kn">import</span> <span class="nn">kf.utils.tsio</span> <span class="k">as</span> <span class="nn">ts</span>
+<span class="c1">#import kfts</span>
+
+<span class="c1"># To Parametrize</span>
+<span class="kn">import</span> <span class="nn">configparser</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">from</span> <span class="nn">ast</span> <span class="kn">import</span> <span class="n">literal_eval</span>
+
+<span class="c1"># Only for deramping </span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">path</span>
+<span class="kn">import</span> <span class="nn">scipy.linalg</span> 
+
+
+<div class="viewcode-block" id="GetConfig"><a class="viewcode-back" href="../fmt.html#prepare_input.GetConfig">[docs]</a><span class="k">class</span> <span class="nc">GetConfig</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class to run read config file and keep everything in object</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configfile</span><span class="p">):</span>
+        
+        <span class="n">config</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">(</span><span class="n">interpolation</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ExtendedInterpolation</span><span class="p">())</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">configfile</span><span class="p">)</span>
+        
+        <span class="c1">#----------------------------------------------</span>
+        <span class="n">secIN</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;INPUT&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">=</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;workdir&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">baselinedir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">+</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;baselinedir&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">igramsdir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">+</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;igramsdir&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">unwfmt</span> <span class="o">=</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;unwfmt&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;ISCE&#39;</span><span class="p">)</span>
+
+        <span class="c1">#optional arguments, None otherwise</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lonfile</span> <span class="o">=</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;lonfile&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latfile</span> <span class="o">=</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;latfile&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">losfile</span> <span class="o">=</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;losfile&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">demfile</span> <span class="o">=</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;demfile&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lonfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lonfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loc</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">lonfile</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">latfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">latfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loc</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">latfile</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">losfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">losfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loc</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">losfile</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">demfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">demfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loc</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">demfile</span><span class="p">)</span>
+                 
+        <span class="n">ilistfile</span> <span class="o">=</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ilistfile&#39;</span><span class="p">,</span><span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">clistfile</span> <span class="o">=</span> <span class="n">secIN</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;clistfile&#39;</span><span class="p">,</span><span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        
+        <span class="n">listfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loc</span><span class="p">,</span> <span class="n">ilistfile</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">listfile</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Will load interferograms listed in&quot;</span><span class="p">,</span><span class="n">listfile</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ilist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="n">listfile</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING : Could not find predefined list of interferograms&quot;</span><span class="p">,</span><span class="n">listfile</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ilist</span> <span class="o">=</span> <span class="kc">None</span> 
+        
+            
+        <span class="c1">#----------------------------------------------</span>
+        <span class="n">secOU</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;OUTPUT&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">secOU</span><span class="o">.</span><span class="n">getboolean</span><span class="p">(</span><span class="s1">&#39;verbose&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outdir</span> <span class="o">=</span> <span class="n">secOU</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outdir&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outfile</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outdir</span> <span class="o">+</span> <span class="n">secOU</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outfile&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span><span class="s1">&#39;PROC-STACK.h5&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Input directory is </span><span class="si">{}</span><span class="s2">, output directory is </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loc</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">outdir</span><span class="p">))</span>
+            
+        <span class="c1">#----------------------------------------------</span>
+        <span class="n">secPA</span>  <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;PARAMETERS&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ylen</span> <span class="o">=</span> <span class="n">secPA</span><span class="o">.</span><span class="n">getint</span><span class="p">(</span><span class="s1">&#39;ylen&#39;</span><span class="p">,</span><span class="n">fallback</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xlen</span> <span class="o">=</span> <span class="n">secPA</span><span class="o">.</span><span class="n">getint</span><span class="p">(</span><span class="s1">&#39;xlen&#39;</span><span class="p">,</span><span class="n">fallback</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">yreflim</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secPA</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;yreflim&#39;</span><span class="p">,</span><span class="n">fallback</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xreflim</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secPA</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;xreflim&#39;</span><span class="p">,</span><span class="n">fallback</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">ylim</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secPA</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ylim&#39;</span><span class="p">,</span><span class="n">fallback</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xlim</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secPA</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;xlim&#39;</span><span class="p">,</span><span class="n">fallback</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cthresh</span> <span class="o">=</span> <span class="n">secPA</span><span class="o">.</span><span class="n">getfloat</span><span class="p">(</span><span class="s1">&#39;cthresh&#39;</span><span class="p">,</span><span class="n">fallback</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cthresh</span> <span class="o">&gt;=</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cthresh</span> <span class="o">&lt;</span><span class="mf">1.0</span><span class="p">),</span> <span class="s2">&quot;Coherence threshold must be between 0 and 1&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cthresh</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="p">:</span>
+            <span class="n">listfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loc</span><span class="p">,</span> <span class="n">clistfile</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">listfile</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Will load coherence maps listed in&quot;</span><span class="p">,</span><span class="n">listfile</span> <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="n">listfile</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+            <span class="k">else</span> <span class="p">:</span> 
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING : Could not find predefined list of coherence maps&quot;</span><span class="p">,</span><span class="n">listfile</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clist</span> <span class="o">=</span> <span class="kc">None</span> 
+            
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">deramp</span> <span class="o">=</span> <span class="n">secPA</span><span class="o">.</span><span class="n">getboolean</span><span class="p">(</span><span class="s1">&#39;deramp&#39;</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">deramp</span><span class="p">:</span>
+            <span class="c1">#Apex of polygon defining the reference region for deramping</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dref</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secPA</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rampzone&#39;</span><span class="p">,</span><span class="n">fallback</span><span class="o">=</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)]))</span>
+         
+        <span class="c1"># wavelength (in meters) or sensor    </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wvl</span> <span class="o">=</span> <span class="n">secPA</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;wavelength&#39;</span><span class="p">,</span><span class="n">fallback</span><span class="o">=</span><span class="s1">&#39;S1&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wvl</span> <span class="o">==</span> <span class="s1">&#39;S1&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wvl</span> <span class="o">=</span> <span class="mf">0.05546576</span> <span class="c1">#number from master/IW1.xml in ISCE as radarwavelength</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Assume Sentinel 1 sensor&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">literal_eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wvl</span><span class="p">),</span><span class="nb">float</span><span class="p">)</span> <span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Sensor wavelength defined to </span><span class="si">{}</span><span class="s2"> METERS&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wvl</span><span class="p">))</span>
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Format of wavelength parameter not understood&quot;</span>
+        
+        <span class="c1"># List for changing endianness. Possible Entries:UNW,COR,DEM,LAT,LON,INC,MASK</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">endianlist</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secPA</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;endianlist&#39;</span><span class="p">,</span><span class="n">fallback</span><span class="o">=</span><span class="p">[]))</span></div>
+        
+        <span class="c1">#End of Class </span>
+    
+
+<span class="c1">#-------------------------------------------------------------------------- </span>
+<span class="c1">#Create IFG list</span>
+
+<div class="viewcode-block" id="getPairs"><a class="viewcode-back" href="../fmt.html#prepare_input.getPairs">[docs]</a><span class="k">def</span> <span class="nf">getPairs</span><span class="p">(</span><span class="n">igramsDir</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Get the two dates of each interferogram</span>
+<span class="sd">    produced by ISCE, in Igram directory.&#39;&#39;&#39;</span>
+    
+    <span class="c1"># Get pairs</span>
+    <span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Get Dates from directory names in </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">igramsDir</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">dirs</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">igramsDir</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">igramsDir</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">dirs</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dirs</span><span class="p">)</span><span class="o">==</span><span class="mi">17</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">dirs</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;_&#39;</span><span class="p">):</span>
+            <span class="n">di1</span> <span class="o">=</span> <span class="n">dirs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span>
+            <span class="n">di2</span> <span class="o">=</span> <span class="n">dirs</span><span class="p">[</span><span class="mi">9</span><span class="p">:</span><span class="mi">17</span><span class="p">]</span>
+            <span class="n">dates1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">di1</span><span class="p">)</span>
+            <span class="n">dates2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">di2</span><span class="p">)</span>
+        
+    <span class="c1"># All done</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dates1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dates2</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="getBaselines"><a class="viewcode-back" href="../fmt.html#prepare_input.getBaselines">[docs]</a><span class="k">def</span> <span class="nf">getBaselines</span><span class="p">(</span><span class="n">baselineDir</span><span class="p">,</span> <span class="n">masterDate</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Get baseline values from baseline files.&#39;&#39;&#39;</span>
+    
+    <span class="c1"># Initialize lists</span>
+    <span class="n">baselineFiles</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">datestrings</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">dateList</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">baselineList</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># List all baseline files</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Looking for baselines in&quot;</span><span class="p">,</span><span class="n">baselineDir</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">dates</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">baselineDir</span><span class="p">):</span>
+        <span class="n">dirs</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">baselineDir</span><span class="p">,</span><span class="n">dates</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">dirs</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">fil</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">dirs</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">fil</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.txt&#39;</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirs</span><span class="p">,</span><span class="n">fil</span><span class="p">))</span><span class="o">.</span><span class="n">st_size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># file not empty</span>
+                        <span class="n">baselineFiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirs</span><span class="p">,</span><span class="n">fil</span><span class="p">))</span>
+                        <span class="n">datestrings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dates</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;found </span><span class="si">{}</span><span class="s2"> baseline files&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">datestrings</span><span class="p">)))</span>
+
+    <span class="c1"># Calculate baseline</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">baselineFiles</span><span class="p">)):</span>
+            
+        <span class="c1"># Get date 1 and 2 of the pair</span>
+        <span class="n">baselineFile</span> <span class="o">=</span> <span class="n">baselineFiles</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">datestring</span> <span class="o">=</span> <span class="n">datestrings</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+      
+        <span class="n">dp2</span> <span class="o">=</span> <span class="n">datestring</span><span class="p">[</span><span class="mi">9</span><span class="p">:</span><span class="mi">17</span><span class="p">]</span>
+        <span class="n">dateList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp2</span><span class="p">)</span>
+
+        <span class="c1"># Read by line</span>
+        <span class="n">linestring</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">baselineFile</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        
+        <span class="c1"># Initialize swath baselines list</span>
+        <span class="n">Bp</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Get baseline of the first swath</span>
+        <span class="n">Bpiw1</span> <span class="o">=</span> <span class="n">linestring</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">Bpiw1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Bpiw1</span><span class="p">[</span><span class="mi">17</span><span class="p">:</span><span class="mi">31</span><span class="p">])</span>
+        <span class="n">Bp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Bpiw1</span><span class="p">)</span>
+
+        <span class="c1"># Get the second swath baseline if exists</span>
+        <span class="k">if</span> <span class="n">linestring</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">3</span><span class="p">]:</span>
+            <span class="n">Bpiw2</span> <span class="o">=</span> <span class="n">linestring</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">4</span><span class="p">]</span>
+            <span class="n">Bpiw2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Bpiw2</span><span class="p">[</span><span class="mi">17</span><span class="p">:</span><span class="mi">31</span><span class="p">])</span>
+            <span class="n">Bp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Bpiw2</span><span class="p">)</span>
+
+            <span class="c1"># Get the third baseline swath</span>
+            <span class="k">if</span> <span class="n">linestring</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">6</span><span class="p">]:</span>
+                <span class="n">Bpiw3</span> <span class="o">=</span> <span class="n">linestring</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">7</span><span class="p">]</span>
+                <span class="n">Bpiw3</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Bpiw3</span><span class="p">[</span><span class="mi">17</span><span class="p">:</span><span class="mi">31</span><span class="p">])</span>
+                <span class="n">Bp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Bpiw3</span><span class="p">)</span>
+
+        <span class="c1"># Calculate mean</span>
+        <span class="n">Bperp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Bp</span><span class="p">)</span>
+        <span class="n">baselineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Bperp</span><span class="p">)</span>
+
+    <span class="c1"># Add master to lists</span>
+    <span class="n">dateList</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">masterDate</span><span class="p">)]</span> <span class="o">+</span> <span class="n">dateList</span>
+    <span class="n">baselineList</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.00</span><span class="p">]),</span> <span class="n">baselineList</span><span class="p">))</span>
+
+    <span class="c1"># Transform lists into arrays</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dateList</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">baselineList</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="save2file"><a class="viewcode-back" href="../fmt.html#prepare_input.save2file">[docs]</a><span class="k">def</span> <span class="nf">save2file</span><span class="p">(</span><span class="n">dates1</span><span class="p">,</span> <span class="n">dates2</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span class="n">dateList</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">baselineList</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">satnameList</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Save baselines to a file.</span>
+<span class="sd">    It can be used for GIAnT time series analysis.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">baselineList</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Initialize list</span>
+        <span class="n">bp_couple</span> <span class="o">=</span> <span class="p">[]</span>
+    
+        <span class="c1"># Get baseline of the pair</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">dates1</span><span class="p">),</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">dt1_ind</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">dateList</span> <span class="o">==</span>  <span class="n">dates1</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">dt2_ind</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">dateList</span> <span class="o">==</span>  <span class="n">dates2</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">bp</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">baselineList</span><span class="p">[</span><span class="n">dt1_ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">baselineList</span><span class="p">[</span><span class="n">dt2_ind</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bp</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;[]&quot;</span><span class="p">))</span><span class="o">==</span><span class="mi">0</span> <span class="p">:</span>
+                <span class="n">bp_couple</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">NaN</span><span class="p">)</span>
+            <span class="k">else</span> <span class="p">:</span>
+                <span class="n">bp_couple</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bp</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;[]&quot;</span><span class="p">))</span>
+    
+        <span class="c1"># Prepare data for saving</span>
+        <span class="n">dates1List</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dates1</span><span class="p">)</span>
+        <span class="n">dates2List</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dates2</span><span class="p">)</span>
+        <span class="n">bp_coupleList</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">bp_couple</span><span class="p">)</span>
+        <span class="c1">#satnameList = [&#39;S1&#39;]*(len(dates1))</span>
+        <span class="n">alldata</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dates1List</span><span class="p">,</span> <span class="n">dates2List</span><span class="p">,</span> <span class="n">bp_coupleList</span><span class="p">]))</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="n">alldata</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">],</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+   
+    <span class="k">else</span> <span class="p">:</span> 
+        <span class="n">alldata</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dates1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dates2</span><span class="p">)))</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="n">alldata</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">],</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39; &#39;</span><span class="p">)</span></div>
+
+<span class="c1">#--------------------------------------------------------------------------     </span>
+<span class="c1">#Find path of interferograms </span>
+
+<div class="viewcode-block" id="makefnames"><a class="viewcode-back" href="../fmt.html#prepare_input.makefnames">[docs]</a><span class="k">def</span> <span class="nf">makefnames</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Generates paths to the files needed for creating the stack.</span>
+<span class="sd">    .. Args:</span>
+<span class="sd">        * dates1     - Date of master </span>
+<span class="sd">        * dates2     - Date of slave</span>
+<span class="sd">    .. Returns:</span>
+<span class="sd">        * iname      - Path to the unwrapped interferogram</span>
+<span class="sd">        * cname      - Path to the coherence file&#39;&#39;&#39;</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_ECMWF_ERA-5_fine_corrected.unw&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)):</span>
+        <span class="n">iname</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_ECMWF_ERA-5_fine_corrected.unw&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)</span>
+        <span class="n">cname</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_ECMWF_ERA-5_fine.cor&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_ECMWF_ERA-5_fine.unw&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No unwrapping error correction for dates: </span><span class="si">{}</span><span class="s1">-</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">))</span>
+        <span class="n">iname</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_ECMWF_ERA-5_fine.unw&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)</span>
+        <span class="n">cname</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_ECMWF_ERA-5_fine.cor&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_fine.unw&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No atmospheric corection for dates: </span><span class="si">{}</span><span class="s1">-</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">))</span>
+        <span class="n">iname</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_fine.unw&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)</span>
+        <span class="n">cname</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_fine.cor&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">)</span>
+
+    <span class="k">else</span> <span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">/filt_fine.unw&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No igram detected for dates: </span><span class="si">{}</span><span class="s1">-</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dates1</span><span class="p">,</span><span class="n">dates2</span><span class="p">))</span>
+        
+    <span class="k">return</span> <span class="n">iname</span><span class="p">,</span><span class="n">cname</span></div>
+
+<span class="c1">#--------------------------------------------------------------------------   </span>
+<span class="c1">#--------------------------------------------------------------------------     </span>
+
+<div class="viewcode-block" id="BuildStack"><a class="viewcode-back" href="../fmt.html#prepare_input.BuildStack">[docs]</a><span class="k">class</span> <span class="nc">BuildStack</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Quick class to deal with stack of interferogram&#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">verbose</span><span class="p">,</span><span class="n">ylims</span><span class="p">,</span><span class="n">xlims</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ylims</span> <span class="o">=</span> <span class="n">ylims</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xlims</span> <span class="o">=</span> <span class="n">xlims</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+       
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Initialize stack&quot;</span><span class="p">)</span>
+
+    <span class="c1">#--------------------------------------</span>
+    <span class="c1">#Create RAW-STACK</span>
+<div class="viewcode-block" id="BuildStack.datenum"><a class="viewcode-back" href="../fmt.html#prepare_input.BuildStack.datenum">[docs]</a>    <span class="k">def</span> <span class="nf">datenum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datelist</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Converts list of dates in yymmdd/yyyymmdd format to ordinal array.&#39;&#39;&#39;</span>
+    
+        <span class="n">Uts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">datelist</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">datelist</span><span class="p">)):</span>
+            <span class="n">dint</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">datelist</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">dint</span> <span class="o">&lt;</span> <span class="mf">1e7</span><span class="p">:</span>
+                <span class="n">dint</span> <span class="o">=</span> <span class="n">dint</span><span class="o">+</span><span class="mf">2e7</span>
+            <span class="n">yy</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dint</span><span class="o">/</span><span class="mi">10000</span><span class="p">)</span>
+            <span class="n">mm</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">dint</span> <span class="o">-</span> <span class="n">yy</span><span class="o">*</span><span class="mi">10000</span><span class="p">)</span><span class="o">/</span><span class="mi">100</span><span class="p">)</span>
+            <span class="n">dd</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dint</span><span class="o">-</span><span class="p">(</span><span class="n">yy</span><span class="o">*</span><span class="mi">10000</span><span class="o">+</span><span class="n">mm</span><span class="o">*</span><span class="mi">100</span><span class="p">))</span>
+            <span class="n">dstr</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">yy</span><span class="p">,</span><span class="n">mm</span><span class="p">,</span><span class="n">dd</span><span class="p">)</span>
+            <span class="n">Uts</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">dstr</span><span class="o">.</span><span class="n">toordinal</span><span class="p">()</span>      
+        <span class="k">return</span> <span class="n">Uts</span></div>
+        
+<div class="viewcode-block" id="BuildStack.ConnectMatrix"><a class="viewcode-back" href="../fmt.html#prepare_input.BuildStack.ConnectMatrix">[docs]</a>    <span class="k">def</span> <span class="nf">ConnectMatrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dates</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the connectivity matrix for given set of IFGs.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            * dates        -&gt;  List of pairs of strings </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            * Uts          -&gt; Unique dates of acquisitions</span>
+<span class="sd">            * connMat      -&gt; Connectivity matrix (1,-1,0)&#39;&#39;&#39;</span>
+        
+        <span class="n">Nifg</span> <span class="o">=</span> <span class="n">dates</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">scenes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">Nifg</span><span class="o">*</span><span class="mi">2</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;str&#39;</span><span class="p">,</span><span class="mi">16</span><span class="p">))</span>
+        <span class="n">scenes</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">dates</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span><span class="n">dates</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]))</span>
+        
+        <span class="c1">#####Get unique date </span>
+        <span class="n">uscenes</span> <span class="o">=</span>  <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">scenes</span><span class="p">)</span>
+        <span class="n">Nsar</span> <span class="o">=</span> <span class="n">uscenes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Uts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">Nsar</span><span class="p">)</span>
+        
+        <span class="c1">######Convert to ordinal</span>
+        <span class="n">Uts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datenum</span><span class="p">(</span><span class="n">uscenes</span><span class="p">)</span> <span class="c1">#ordinal dates</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">Uts</span><span class="p">)</span> <span class="c1">#Increasing order of time</span>
+        <span class="n">uscenes</span> <span class="o">=</span> <span class="n">uscenes</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+
+        <span class="n">ConnMat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">Nifg</span><span class="p">,</span><span class="n">Nsar</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nifg</span><span class="p">):</span>
+            <span class="n">mind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">uscenes</span> <span class="o">==</span> <span class="n">dates</span><span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">sind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">uscenes</span> <span class="o">==</span> <span class="n">dates</span><span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">ConnMat</span><span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="n">mind</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">ConnMat</span><span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="n">sind</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+        <span class="n">Uts</span> <span class="o">=</span> <span class="n">Uts</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">Jmat</span> <span class="o">=</span> <span class="n">ConnMat</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">days</span> <span class="o">=</span> <span class="n">Uts</span></div>
+    
+    <span class="c1">#-------------------------------------</span>
+    <span class="c1">#Create PROC-STACK</span>
+<div class="viewcode-block" id="BuildStack.referenceIgram"><a class="viewcode-back" href="../fmt.html#prepare_input.BuildStack.referenceIgram">[docs]</a>    <span class="k">def</span> <span class="nf">referenceIgram</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">phs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; remove for each single 2D interfero phs&#39;&#39;&#39;</span>
+        <span class="n">Ry0</span><span class="p">,</span><span class="n">Ry1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ylims</span>
+        <span class="n">Rx0</span><span class="p">,</span><span class="n">Rx1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xlims</span>
+        
+        <span class="c1">#Compute reference phase </span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">phs</span><span class="p">[</span><span class="n">Ry0</span><span class="p">:</span><span class="n">Ry1</span><span class="p">,</span><span class="n">Rx0</span><span class="p">:</span><span class="n">Rx1</span><span class="p">]</span>
+        <span class="n">refph</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">refph</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">phs</span><span class="p">[</span><span class="n">Ry0</span><span class="o">-</span><span class="mi">10</span><span class="p">:</span><span class="n">Ry1</span><span class="o">+</span><span class="mi">10</span><span class="p">,</span><span class="n">Rx0</span><span class="o">-</span><span class="mi">10</span><span class="p">:</span><span class="n">Rx1</span><span class="o">+</span><span class="mi">10</span><span class="p">])):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Reference region is empty, expand by 10x10&quot;</span><span class="p">)</span>
+                <span class="n">refph</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">phs</span><span class="p">[</span><span class="n">Ry0</span><span class="o">-</span><span class="mi">10</span><span class="p">:</span><span class="n">Ry1</span><span class="o">+</span><span class="mi">10</span><span class="p">,</span><span class="n">Rx0</span><span class="o">-</span><span class="mi">10</span><span class="p">:</span><span class="n">Rx1</span><span class="o">+</span><span class="mi">10</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">phs</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Interferogram is empty (all zeros).&#39;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="p">:</span> 
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Reference region has no pixels.&#39;</span><span class="p">)</span>
+            
+        <span class="n">phs</span> <span class="o">=</span> <span class="n">phs</span> <span class="o">-</span> <span class="n">refph</span>
+        <span class="n">phs</span> <span class="o">=</span> <span class="n">phs</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">phs</span></div>
+        
+    <span class="k">def</span> <span class="nf">buildAmat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">Nxy</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">poly</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">Nxy</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">poly</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">Nxy</span><span class="p">),</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">poly</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">Nxy</span><span class="p">),</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">x</span><span class="o">*</span><span class="n">y</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">A</span> 
+        
+<div class="viewcode-block" id="BuildStack.findramp"><a class="viewcode-back" href="../fmt.html#prepare_input.BuildStack.findramp">[docs]</a>    <span class="k">def</span> <span class="nf">findramp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phs</span><span class="p">,</span><span class="n">mask</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Estimate the best-fitting ramp parameters for a matrix.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            * phs     -  Input unwrapped phase matrix.</span>
+<span class="sd">            * mask    -  Mask of reliable values.</span>
+<span class="sd">            * poly    -  Integer flag for type of correction.</span>
+<span class="sd">                            1 - Constant</span>
+<span class="sd">                            3 - Plane</span>
+<span class="sd">                            4 - Plane + cross term</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            * ramppoly - Polynomial corresponding to the rank&#39;&#39;&#39;</span>
+    
+        <span class="c1">#On masked grid</span>
+        <span class="p">[</span><span class="n">ii</span><span class="p">,</span><span class="n">jj</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">mask</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">phs</span><span class="p">))</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">ii</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">jj</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">)</span>
+        <span class="n">gval</span> <span class="o">=</span> <span class="n">phs</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span><span class="n">jj</span><span class="p">]</span> <span class="c1">#Good values</span>
+        
+        <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buildAmat</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ii</span><span class="p">),</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+    
+        <span class="n">ramp</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">A</span><span class="p">,</span><span class="n">gval</span><span class="p">,</span> <span class="n">cond</span><span class="o">=</span><span class="mf">1.0e-8</span><span class="p">)</span>
+        <span class="n">ramppoly</span> <span class="o">=</span> <span class="n">ramp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+        <span class="k">return</span> <span class="n">ramppoly</span></div>
+    
+<div class="viewcode-block" id="BuildStack.removeramp"><a class="viewcode-back" href="../fmt.html#prepare_input.BuildStack.removeramp">[docs]</a>    <span class="k">def</span> <span class="nf">removeramp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phs</span><span class="p">,</span><span class="n">ramppoly</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Deramp a matrix with the given ramp polynomial.</span>
+<span class="sd">        .. Args:</span>
+<span class="sd">            * phs             Input matrix</span>
+<span class="sd">            * ramppoly        Ramp polynomial</span>
+<span class="sd">        .. Returns:</span>
+<span class="sd">            * dphs            Deramped phase matrix.&#39;&#39;&#39;</span>
+    
+        <span class="c1">#On full grid </span>
+        <span class="n">X</span><span class="p">,</span><span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">)</span><span class="o">*</span><span class="mf">1.0</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">)</span><span class="o">*</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="o">*</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="n">Y</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="o">*</span><span class="mf">1.0</span><span class="p">)</span>
+    
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">poly</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">ramppoly</span><span class="p">),</span> <span class="s2">&quot;&quot;</span>
+        
+        <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buildAmat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">,</span><span class="n">X</span><span class="p">,</span><span class="n">Y</span><span class="p">)</span>
+        <span class="n">dphs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="o">-</span><span class="n">A</span><span class="p">,</span><span class="n">ramppoly</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">A</span>
+        
+        <span class="n">dphs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dphs</span><span class="p">,(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">))</span>
+        <span class="n">dphs</span> <span class="o">=</span> <span class="n">phs</span> <span class="o">+</span> <span class="n">dphs</span>
+    
+        <span class="k">return</span> <span class="n">dphs</span></div>
+    
+<div class="viewcode-block" id="BuildStack.deramp"><a class="viewcode-back" href="../fmt.html#prepare_input.BuildStack.deramp">[docs]</a>    <span class="k">def</span> <span class="nf">deramp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">poly</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">dref</span><span class="o">=</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)]):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Network deramping of the stack of interferograms. Used when no GPS </span>
+<span class="sd">        is available. </span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            * out       Output stack object</span>
+<span class="sd">        </span>
+<span class="sd">        Kwargs:</span>
+<span class="sd">            * network   Network deramping or individual deramping</span>
+<span class="sd">            * poly      Polynomial code for deramping</span>
+<span class="sd">            * dref      Coordinates of points delimiting a polygon taken </span>
+<span class="sd">                        as the reference region for estimating a ramp</span>
+<span class="sd">                        (list of 2-tuple) &#39;&#39;&#39;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">nslice</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">poly</span> <span class="o">=</span> <span class="n">poly</span>
+        
+        <span class="c1"># Define reference region for deramping</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dref</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="p">:</span>
+            <span class="c1"># not enough points</span>
+            <span class="c1"># means all interfero as reference for deramping</span>
+            <span class="n">maskref</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">))</span>
+    
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">dref</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">dref</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">==</span><span class="nb">tuple</span> <span class="p">:</span>
+            <span class="c1"># polygon of reference </span>
+            <span class="n">polygon</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">dref</span><span class="p">)</span>
+    
+            <span class="c1">#geometry of data</span>
+            <span class="n">xv</span><span class="p">,</span><span class="n">yv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">))),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">))))</span>
+    
+            <span class="c1">#create mask for ref</span>
+            <span class="n">maskref</span> <span class="o">=</span> <span class="n">polygon</span><span class="o">.</span><span class="n">contains_points</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xv</span><span class="o">.</span><span class="n">flatten</span><span class="p">()[:,</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span><span class="n">yv</span><span class="o">.</span><span class="n">flatten</span><span class="p">()[:,</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])))</span>
+            <span class="n">maskref</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">maskref</span><span class="p">,(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">))</span>
+            
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Points defining reference zone for deramping should be a list of 2-tuples&quot;</span>
+    
+        <span class="c1"># Get Ramp parameter for each interferogram</span>
+        <span class="n">ramparr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nslice</span><span class="p">,</span> <span class="n">poly</span><span class="p">))</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Get ramp for each interferogram&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">kkk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nslice</span><span class="p">):</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">kkk</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+    
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
+            <span class="n">masktmp</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span><span class="n">maskref</span>
+    
+            <span class="n">ramp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">findramp</span><span class="p">(</span><span class="n">dat</span><span class="p">,</span> <span class="n">masktmp</span><span class="p">)</span>
+            <span class="n">ramparr</span><span class="p">[</span><span class="n">kkk</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">ramp</span>
+        
+        <span class="k">if</span> <span class="n">network</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Check network consistency&quot;</span><span class="p">)</span>
+            <span class="n">jmat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Jmat</span>
+            <span class="n">umat</span><span class="p">,</span> <span class="n">svec</span><span class="p">,</span> <span class="n">vmat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">jmat</span><span class="p">,</span> <span class="n">compute_uv</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">rnk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">matrix_rank</span><span class="p">(</span><span class="n">jmat</span><span class="p">)</span>
+            <span class="n">svec</span><span class="p">[</span><span class="n">rnk</span><span class="p">:]</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="n">jtilde</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">umat</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">svec</span><span class="p">),</span> <span class="n">vmat</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">jmat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nslice</span><span class="p">))</span>
+            <span class="n">jtilde</span> <span class="o">=</span> <span class="n">jmat</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    
+        <span class="n">jinv</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">jtilde</span><span class="p">)</span>
+        <span class="n">sarramp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">jinv</span><span class="p">,</span> <span class="n">ramparr</span><span class="p">)</span>
+        <span class="n">rampest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">jmat</span><span class="p">,</span> <span class="n">sarramp</span><span class="p">)</span>
+        
+        <span class="c1">#clean</span>
+        <span class="k">del</span> <span class="n">ramparr</span>
+        <span class="k">del</span> <span class="n">sarramp</span>
+        <span class="k">del</span> <span class="n">jtilde</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Apply network deramp for each interferogram&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">kkk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nslice</span><span class="p">):</span>
+            <span class="n">ramp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">removeramp</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">kkk</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span> <span class="n">rampest</span><span class="p">[</span><span class="n">kkk</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">out</span><span class="p">[</span><span class="n">kkk</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">referenceIgram</span><span class="p">(</span><span class="n">ramp</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out</span> </div></div>
+        
+<span class="c1">#-------------------------------------------------------------------------- </span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    
+    <span class="c1"># Get inline config file name</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span> <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;Collect and prepare data for InSAR TSA&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-c&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">dest</span> <span class="o">=</span> <span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span> <span class="o">=</span> <span class="s1">&#39;Specify INI config file containing at least sections INPUT,OUTPUT,PARAMETERS&#39;</span><span class="p">)</span>
+    <span class="n">argparser</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">while</span> <span class="p">(</span><span class="ow">not</span> <span class="n">argparser</span><span class="o">.</span><span class="n">config</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Please choose a config file&#39;</span><span class="p">)</span>
+        <span class="n">exit</span><span class="p">()</span>
+    
+    <span class="c1"># extract content of config and store in class</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">GetConfig</span><span class="p">(</span><span class="n">argparser</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+    
+    <span class="c1"># Get master date</span>
+    <span class="n">baselineName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">baselinedir</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">masterDate</span> <span class="o">=</span> <span class="n">baselineName</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span><span class="mi">2</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Get date pairs and baselines</span>
+    <span class="n">dates1</span><span class="p">,</span> <span class="n">dates2</span> <span class="o">=</span> <span class="n">getPairs</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">igramsdir</span><span class="p">)</span>
+
+    <span class="c1"># Get baselines and save to txt </span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">baselinedir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dateList</span><span class="p">,</span> <span class="n">baselineList</span> <span class="o">=</span> <span class="n">getBaselines</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">baselinedir</span><span class="p">,</span> <span class="n">masterDate</span><span class="p">)</span>
+        <span class="n">save2file</span><span class="p">(</span><span class="n">dates1</span><span class="p">,</span> <span class="n">dates2</span><span class="p">,</span> <span class="s2">&quot;Ifg_dates_baselines.txt&quot;</span><span class="p">,</span> <span class="n">dateList</span><span class="p">,</span> <span class="n">baselineList</span><span class="p">)</span>
+    <span class="k">else</span> <span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Baseline directory not defined, will not keep track of baselines&#39;</span><span class="p">)</span> 
+        <span class="n">save2file</span><span class="p">(</span><span class="n">dates1</span><span class="p">,</span> <span class="n">dates2</span><span class="p">,</span> <span class="s2">&quot;Ifg_dates.txt&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Load function to find interferogram file properly</span>
+    <span class="n">dates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">dates1</span><span class="p">[:,</span><span class="kc">None</span><span class="p">],</span><span class="n">dates2</span><span class="p">[:,</span><span class="kc">None</span><span class="p">]))</span>
+    
+    <span class="c1"># Spatial definitions</span>
+    <span class="n">flen</span><span class="p">,</span><span class="n">fwid</span> <span class="o">=</span>  <span class="n">args</span><span class="o">.</span><span class="n">ylen</span><span class="p">,</span><span class="n">args</span><span class="o">.</span><span class="n">xlen</span>  <span class="c1">#former shape</span>
+    <span class="n">x0</span><span class="p">,</span><span class="n">x1</span>    <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">xlim</span>
+    <span class="n">y0</span><span class="p">,</span><span class="n">y1</span>    <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">ylim</span>
+    <span class="n">nlen</span><span class="p">,</span><span class="n">nwid</span> <span class="o">=</span> <span class="n">y1</span><span class="o">-</span><span class="n">y0</span><span class="p">,</span> <span class="n">x1</span><span class="o">-</span><span class="n">x0</span> <span class="c1">#new shape </span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------------------------------------------------&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Spatially Resize all interferograms from </span><span class="si">{}</span><span class="s2"> to </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">((</span><span class="n">flen</span><span class="p">,</span><span class="n">fwid</span><span class="p">),(</span><span class="n">nlen</span><span class="p">,</span><span class="n">nwid</span><span class="p">)))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Reference zone along Y </span><span class="si">{}</span><span class="s2"> and X </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">yreflim</span><span class="p">,</span><span class="n">args</span><span class="o">.</span><span class="n">xreflim</span><span class="p">))</span>
+
+    <span class="n">stack</span> <span class="o">=</span> <span class="n">BuildStack</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span><span class="n">args</span><span class="o">.</span><span class="n">yreflim</span><span class="p">,</span><span class="n">args</span><span class="o">.</span><span class="n">xreflim</span><span class="p">)</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">ConnectMatrix</span><span class="p">(</span><span class="n">dates</span><span class="p">)</span>
+    <span class="n">Nifg</span><span class="p">,</span> <span class="n">Nsar</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">Jmat</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">nIslands</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">Jmat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">matrix_rank</span><span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">Jmat</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span> <span class="p">:</span> 
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------------------------------------------------&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of interferograms = &#39;</span><span class="p">,</span> <span class="n">Nifg</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of unique SAR scenes = &#39;</span><span class="p">,</span> <span class="n">Nsar</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of connected components in network: &#39;</span><span class="p">,</span> <span class="n">nIslands</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nIslands</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;WARNING: The network appears to contain disconnected components&#39;</span><span class="p">)</span>
+        
+    <span class="c1">#######Setting first scene to reference.</span>
+    <span class="n">tims</span> <span class="o">=</span> <span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="o">-</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="mf">365.25</span>    <span class="c1">#conversion to years</span>
+    
+   
+    <span class="c1">#####Preparing for reading in IFGs.</span>
+    <span class="n">outname</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">outfile</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Output h5file:&#39;</span><span class="p">,</span><span class="n">outname</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outname</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">outname</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Deleting previous&#39;</span><span class="p">,</span><span class="n">outname</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">deramp</span><span class="p">:</span>
+        <span class="n">outtmp</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span><span class="s2">&quot;NODERAMP-STACK.h5&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outtmp</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">outtmp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;open temporary H5file for storage of raw interferograms before deramping </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">outtmp</span><span class="p">))</span>
+        <span class="n">ftmp</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">outtmp</span><span class="p">,</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">ifgsraw</span> <span class="o">=</span> <span class="n">ftmp</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;igram&#39;</span><span class="p">,(</span><span class="n">Nifg</span><span class="p">,</span><span class="n">nlen</span><span class="p">,</span><span class="n">nwid</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">outname</span><span class="p">,</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;All the raw data read from individual interferograms into a single location for fast access.&#39;</span>
+        <span class="n">ifgs</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;igram&#39;</span><span class="p">,(</span><span class="n">Nifg</span><span class="p">,</span><span class="n">nlen</span><span class="p">,</span><span class="n">nwid</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+        <span class="n">ifgs</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Unwrapped IFGs read straight from files.&#39;</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Reading in IFGs&#39;</span><span class="p">)</span>
+    <span class="n">unwfmt</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">unwfmt</span>
+    <span class="n">endianlist</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">endianlist</span>
+    
+    <span class="c1">#Single sensor being used.</span>
+    <span class="n">scl</span> <span class="o">=</span> <span class="mi">1000</span> <span class="o">*</span><span class="n">args</span><span class="o">.</span><span class="n">wvl</span><span class="o">/</span><span class="p">(</span><span class="mi">4</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="c1">####Converting to mm.</span>
+                
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">ilist</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1">#####File names not provided as input</span>
+            <span class="n">iname</span><span class="p">,</span><span class="n">cname</span> <span class="o">=</span> <span class="n">makefnames</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">igramsdir</span><span class="p">,</span><span class="n">dates</span><span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span><span class="n">dates</span><span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span> <span class="c1">#cname may not exist at this stage</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1">#####File names provided in input file</span>
+            <span class="n">iname</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">ilist</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">cthresh</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">cname</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">clist</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span> 
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Interferogram </span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">Nifg</span><span class="p">,</span> <span class="n">dates1</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">dates2</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span>
+
+        <span class="c1">#----------------------------------------------------------------</span>
+        <span class="c1"># READ IGRAM</span>
+        <span class="k">if</span> <span class="n">unwfmt</span> <span class="ow">in</span>  <span class="p">[</span><span class="s1">&#39;GMT&#39;</span><span class="p">,</span><span class="s1">&#39;GRD&#39;</span><span class="p">]:</span>
+            <span class="n">phs</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_grd</span><span class="p">(</span><span class="n">iname</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">flen</span><span class="p">,</span><span class="n">fwid</span><span class="p">))</span>
+        
+        <span class="k">elif</span> <span class="n">unwfmt</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ISCE&#39;</span><span class="p">,</span><span class="s1">&#39;RMG&#39;</span><span class="p">,</span> <span class="s1">&#39;FLT&#39;</span><span class="p">]:</span> 
+            <span class="k">if</span> <span class="n">unwfmt</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ISCE&#39;</span><span class="p">,</span><span class="s1">&#39;RMG&#39;</span><span class="p">]:</span>
+                <span class="n">mapname</span> <span class="o">=</span> <span class="s1">&#39;BIL&#39;</span> <span class="c1">#Band Interleaved by Line adapted for ISCEstackS1</span>
+            <span class="k">elif</span> <span class="n">unwfmt</span><span class="o">==</span><span class="s1">&#39;FLT&#39;</span> <span class="p">:</span> 
+                <span class="n">mapname</span> <span class="o">=</span> <span class="s1">&#39;BSQ&#39;</span> <span class="c1">#Band Sequential</span>
+            <span class="n">phs</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">iname</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="nb">map</span><span class="o">=</span><span class="n">mapname</span><span class="p">,</span>
+                            <span class="n">nchannels</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;UNW&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Undefined format for unw files.&#39;</span><span class="p">)</span>
+        
+        <span class="c1">#----------------------------------------------------------------</span>
+        <span class="c1"># READ COHERENCE</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">cthresh</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span> <span class="c1">#Load only if needed </span>
+            <span class="k">if</span> <span class="n">unwfmt</span> <span class="ow">in</span>  <span class="p">[</span><span class="s1">&#39;GMT&#39;</span><span class="p">,</span><span class="s1">&#39;GRD&#39;</span><span class="p">]:</span>
+                <span class="n">cor</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_grd</span><span class="p">(</span><span class="n">cname</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">flen</span><span class="p">,</span><span class="n">fwid</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">unwfmt</span> <span class="o">==</span> <span class="s1">&#39;ISCE&#39;</span><span class="p">:</span> 
+                <span class="n">cor</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">cname</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="nb">map</span><span class="o">=</span><span class="s1">&#39;BIP&#39;</span><span class="p">,</span>
+                        <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;COR&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">unwfmt</span> <span class="o">==</span> <span class="s1">&#39;RMG&#39;</span><span class="p">:</span>
+                <span class="n">cor</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">cname</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="nb">map</span><span class="o">=</span><span class="s1">&#39;BIL&#39;</span><span class="p">,</span>
+                        <span class="n">nchannels</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;COR&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">unwfmt</span> <span class="o">==</span> <span class="s1">&#39;FLT&#39;</span><span class="p">:</span>
+                <span class="n">cor</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">cname</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span><span class="nb">map</span><span class="o">=</span><span class="s1">&#39;BSQ&#39;</span><span class="p">,</span>
+                        <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;COR&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Undefined format for cor files. Maybe different from UNW&#39;</span><span class="p">)</span>
+        
+        <span class="c1">#----------------------------------------------------------------</span>
+        <span class="c1"># MASK AND REFERENCING</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">nlen</span><span class="p">,</span><span class="n">nwid</span><span class="p">))</span> 
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">cthresh</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="c1"># Coherence threshold</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">cor</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span><span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">args</span><span class="o">.</span><span class="n">cthresh</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        
+        <span class="n">mask</span><span class="p">[</span><span class="n">phs</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span><span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>  <span class="c1"># zeros to NaN</span>
+        <span class="n">phs</span> <span class="o">=</span> <span class="n">phs</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span><span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">]</span><span class="o">*</span><span class="n">mask</span><span class="o">*</span><span class="n">scl</span>         <span class="c1"># cut and convert to millimeters !!</span>
+        
+        <span class="c1">#Reference and Save interferogram to HDF5 file </span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">deramp</span><span class="p">:</span>
+            <span class="n">ifgsraw</span><span class="p">[</span><span class="n">k</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">referenceIgram</span><span class="p">(</span><span class="n">phs</span><span class="p">)</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="n">ifgs</span><span class="p">[</span><span class="n">k</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">referenceIgram</span><span class="p">(</span><span class="n">phs</span><span class="p">)</span>
+        
+        <span class="c1">#END iteration over interferograms</span>
+        
+    <span class="c1">#--------------------------------------------------------------------</span>
+    <span class="c1"># READ and SAVE LATITUDE and LONGITUDE FILES</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">latfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span>
+        <span class="k">if</span> <span class="n">unwfmt</span> <span class="ow">in</span>  <span class="p">[</span><span class="s1">&#39;GMT&#39;</span><span class="p">]:</span>
+            <span class="n">lat</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_grd</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">latfile</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">flen</span><span class="p">,</span><span class="n">fwid</span><span class="p">))</span>
+            <span class="n">lon</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_grd</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">lonfile</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">flen</span><span class="p">,</span><span class="n">fwid</span><span class="p">))</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="n">lat</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">latfile</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+                                <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;LAT&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+            <span class="n">lon</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">lonfile</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+                                <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;LON&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------------------------------------------------&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;mean LAT&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">lat</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;mean LON&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">lon</span><span class="p">))</span>
+
+        <span class="c1">#reshape</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">lat</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">]</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">lon</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">]</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">lat</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">lon</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        
+        <span class="c1">#save in compact form into a Binary file</span>
+        <span class="n">lout</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span><span class="s2">&quot;lat.flt&quot;</span><span class="p">),</span><span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+        <span class="n">lat</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="n">lout</span><span class="p">)</span>
+        <span class="n">lout</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>                        
+        
+        <span class="n">lout</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span><span class="s2">&quot;lon.flt&quot;</span><span class="p">),</span><span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+        <span class="n">lon</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="n">lout</span><span class="p">)</span>
+        <span class="n">lout</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="c1">#--------------------------------------------------------------------</span>
+    <span class="c1"># READ and SAVE Line of Sight</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">losfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">unwfmt</span> <span class="ow">in</span>  <span class="p">[</span><span class="s1">&#39;GMT&#39;</span><span class="p">]:</span>
+            <span class="n">ang</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_grd</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">losfile</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">flen</span><span class="p">,</span><span class="n">fwid</span><span class="p">))</span> <span class="c1">#### never tested </span>
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="n">ang</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">losfile</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span><span class="nb">map</span><span class="o">=</span><span class="s1">&#39;BIL&#39;</span><span class="p">,</span>
+                                    <span class="n">nchannels</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># LOS incidence</span>
+            <span class="n">azi</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">losfile</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span><span class="nb">map</span><span class="o">=</span><span class="s1">&#39;BIL&#39;</span><span class="p">,</span>
+                                    <span class="n">nchannels</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># LOS azimuth</span>
+            
+        <span class="n">ang</span> <span class="o">=</span> <span class="n">ang</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">]</span>
+        <span class="n">ang</span> <span class="o">=</span> <span class="n">ang</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">azi</span> <span class="o">=</span> <span class="n">azi</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">]</span>
+        <span class="n">azi</span> <span class="o">=</span> <span class="n">azi</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;mean LOS incidence&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">ang</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">ang</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;mean LOS azimuth&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">azi</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">azi</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;save files inc.flt and azi.flt in &quot;</span><span class="p">,</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">)</span>
+
+        <span class="n">lout</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span><span class="s2">&quot;inc.flt&quot;</span><span class="p">),</span><span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+        <span class="n">ang</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="n">lout</span><span class="p">)</span>
+        <span class="n">lout</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="n">lout</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span><span class="s2">&quot;azi.flt&quot;</span><span class="p">),</span><span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+        <span class="n">azi</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="n">lout</span><span class="p">)</span>
+        <span class="n">lout</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="c1">#--------------------------------------------------------------------</span>
+    <span class="c1"># READ and SAVE DEM</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">demfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">unwfmt</span>  <span class="o">==</span> <span class="s1">&#39;GMT&#39;</span><span class="p">:</span>
+            <span class="n">hgt</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_grd</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">demfile</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">flen</span><span class="p">,</span><span class="n">fwid</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">unwfmt</span> <span class="o">==</span> <span class="s1">&#39;ISCE&#39;</span><span class="p">:</span> <span class="c1">## adapted for ISCEstackS1</span>
+            <span class="n">hgt</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">demfile</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="nb">map</span><span class="o">=</span><span class="s1">&#39;BIP&#39;</span><span class="p">,</span>
+                        <span class="n">nchannels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;DEM&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">unwfmt</span><span class="o">==</span><span class="s1">&#39;RMG&#39;</span><span class="p">:</span>
+            <span class="n">hgt</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">demfile</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="nb">map</span><span class="o">=</span><span class="s1">&#39;BIL&#39;</span><span class="p">,</span>
+                        <span class="n">nchannels</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;DEM&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">unwfmt</span><span class="o">==</span><span class="s1">&#39;FLT&#39;</span><span class="p">:</span>
+            <span class="n">hgt</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">load_mmap</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">demfile</span><span class="p">,</span> <span class="n">fwid</span><span class="p">,</span> <span class="n">flen</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="nb">map</span><span class="o">=</span><span class="s1">&#39;BSQ&#39;</span><span class="p">,</span> 
+                        <span class="n">conv</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;DEM&#39;</span> <span class="ow">in</span> <span class="n">endianlist</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown DEM format.&#39;</span><span class="p">)</span>
+        
+        <span class="n">hgt</span> <span class="o">=</span> <span class="n">hgt</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span><span class="n">x1</span><span class="p">]</span>
+        <span class="n">hgt</span> <span class="o">=</span> <span class="n">hgt</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEM min, max&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">hgt</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">hgt</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;save files hgt.rdr in &quot;</span><span class="p">,</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">)</span>
+
+        <span class="n">lout</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span><span class="s2">&quot;hgt.rdr&quot;</span><span class="p">),</span><span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+        <span class="n">hgt</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="n">lout</span><span class="p">)</span>
+        <span class="n">lout</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="c1">#--------------------------------------------------------------------</span>
+    <span class="c1"># Deramp interferograms</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">deramp</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------------------------------------------------&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: deramping takes time&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">dref</span> <span class="o">==</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Deramping on whole interferogram&#39;s surface&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Points defining the polygon on which deramping is performed :&quot;</span><span class="p">,</span><span class="n">args</span><span class="o">.</span><span class="n">dref</span><span class="p">)</span>
+        
+        <span class="c1">#Create </span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">outname</span><span class="p">,</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;All the raw data read from individual interferograms into a single location for fast access.&#39;</span>
+        <span class="n">ifgs</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;igram&#39;</span><span class="p">,(</span><span class="n">Nifg</span><span class="p">,</span><span class="n">nlen</span><span class="p">,</span><span class="n">nwid</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+        <span class="n">ifgs</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Unwrapped IFGs after deramping&#39;</span>
+        
+        <span class="c1">#Parse raw and deramp interferogram stacks as H5py dataset to save memory</span>
+        <span class="n">stack</span><span class="o">.</span><span class="n">deramp</span><span class="p">(</span><span class="n">ifgsraw</span><span class="p">,</span> <span class="n">ifgs</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">poly</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">dref</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">dref</span><span class="p">)</span> 
+        <span class="n">ftmp</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> 
+        
+    <span class="c1">#--------------------------------------------------------------------</span>
+    <span class="c1"># Finilize storage </span>
+    
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">baselinedir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>   
+        <span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;bperp&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">baselineList</span><span class="p">))</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Array of baseline[:]s.&#39;</span>
+    
+    <span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;Jmat&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">stack</span><span class="o">.</span><span class="n">Jmat</span><span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Connectivity matrix [-1,1,0]&#39;</span>
+    
+    <span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;tims&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">tims</span><span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39; Array of SAR acquisition times.&#39;</span>
+    
+    <span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;dates&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Ordinal[:]s of SAR acquisition dates.&#39;</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/Geo4DLogo.jpg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=ManonDls&repo=KFTS-InSAR&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../flow.html">2. KFTS-InSAR Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../func.html">3. Functional model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kal.html">4. Kalman Filter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fmt.html">5. Setup and formating</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../test.html">6. Synthetic data</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, M. Dalaison & R. Jolivet.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

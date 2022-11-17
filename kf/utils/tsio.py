@@ -84,6 +84,9 @@ def load_mmap(fname, nxx, nyy, map='BSQ', nchannels=1, channel=1, datatype=np.fl
         try:
             gmap = np.memmap(fname, dtype=datatype,mode='r', shape = (nsamps), offset = noffset)
         except:
+            print("Shape :", nsamps)
+            print("Offset :",noffset)
+            print("Shape should match",np.memmap(fname, dtype=datatype,mode='r').shape)
             raise Exception('Could not open BIP style file or file of wrong size: ' + fname)
 
         if conv:

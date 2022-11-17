@@ -110,8 +110,8 @@ class SynteticKF(object):
         perpendicular baseline constraints.
             * rr    : float       
                     variance in data (std**2)
-            * sig_i : float    
-                    std of noise on phase differences
+            * sig_i : float 
+                    std of noise on phase differences 
             * t_sep : integer, optional     
                     time separation allowed
             * perp_dist : float, optional
@@ -168,14 +168,15 @@ class SynteticKF(object):
         
         # Build interferograms
         if self.phase.ndim == 1 :
-            self.igram = np.dot(self.links,self.phase) \
-                    + np.random.normal(0,sig_i,np.shape(self.links)[0])
+            self.misclos = np.random.normal(0,sig_i,np.shape(self.links)[0])
+            self.igram = np.dot(self.links,self.phase) + self.misclos 
         
         if self.phase.ndim == 3 : 
             ny,nx = self.phase.shape[:2]
             self.phase = np.reshape(self.phase,(ny*nx,len(self.time)))
+            self.misclos = np.random.normal(0,sig_i,(nx*ny,np.shape(self.links)[0]))
             interf = [np.dot(self.links,self.phase[j,:]) for j in range(nx*ny)] \
-                +np.random.normal(0,sig_i,(nx*ny,np.shape(self.links)[0]))
+                        + self.misclos
         
             #reshape interferograms
             self.igram = np.reshape(interf.T,(interf.shape[-1],ny,nx))

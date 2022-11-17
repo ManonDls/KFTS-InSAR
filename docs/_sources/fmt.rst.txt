@@ -1,6 +1,23 @@
 Setup and formating for KF
 **************************
 
+Prepare inputs
+==============
+
+KFTS-InSAR reads an HDF5 file containing the interferogram stack. It can contain the following dataset, although other format are suported, for *N* interferograms of (*Y*, *X*) pixels linking *M* acquisitions
+
+```
+Jmat            Dataset {N, M}     Connectivity matrix [-1,1,0]
+bperp           Dataset {N}        Perpendicular baseline array (not used by KFTS yet)
+dates           Dataset {M}        Array of ordinal values for SAR acquisition dates
+figram          Dataset {N, Y, X}  Array of interferograms 
+tims            Dataset {M}        Array of SAR acquisition times in decimal years
+```
+.. note:: KFTS is able to read ``MintPy`` ifgramStack file. 
+
+.. automodule:: prepare_input
+    :members:
+
 Read and formate data 
 =====================
 

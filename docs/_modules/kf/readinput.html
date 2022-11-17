@@ -1,17 +1,17 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>kf.readinput &#8212; KFTS-InSAR 0.0.1 documentation</title>
-    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
     <script src="../../_static/underscore.js"></script>
     <script src="../../_static/doctools.js"></script>
-    <script src="../../_static/language_data.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
    
@@ -46,6 +46,11 @@
 <span class="kn">import</span> <span class="nn">h5py</span><span class="o">,</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">datetime</span> <span class="k">as</span> <span class="nn">dt</span>
 
+<span class="c1">#local load only to convert MintPy format</span>
+<span class="kn">from</span> <span class="nn">prepare_input</span> <span class="kn">import</span> <span class="n">BuildStack</span>
+
+<span class="c1">#os.environ[&quot;HDF5_USE_FILE_LOCKING&quot;] = &quot;FALSE&quot;</span>
+
 <span class="c1">###########################################################################</span>
 <span class="c1"># WORK FROM DATA</span>
 <span class="k">class</span> <span class="nc">Subregion</span><span class="p">():</span>
@@ -57,7 +62,7 @@
 
 <div class="viewcode-block" id="SetupKF"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF">[docs]</a><span class="k">class</span> <span class="nc">SetupKF</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h5file</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;ISCE&#39;</span><span class="p">,</span> <span class="n">mpi</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mpiarg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">subregion</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h5file</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;ISCE&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mpiarg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">subregion</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Class for reading and modifying interferograms for Kalman filtering.</span>
 <span class="sd">            :h5file: .h5 file path containing</span>
@@ -66,12 +71,17 @@
 <span class="sd">                - dates : absolute data</span>
 <span class="sd">                - igram : interferograms</span>
 <span class="sd">                - links : connection between phases to build interfero (M x N), 0 1 and -1</span>
-<span class="sd">                - bperp : perpendicular baseline between aquisitions</span>
+<span class="sd">                - bperp : perpendicular baseline between aquisitions (not exploited yet)</span>
 <span class="sd">        Opts:</span>
-<span class="sd">            :fmt:    format of H5file input, default is &#39;ISCE&#39;</span>
+<span class="sd">            :fmt:    format of H5file input, default is &#39;ISCE&#39; (also &#39;RAW&#39; &#39;MintPy&#39;)</span>
 <span class="sd">            :mpi:    do you use parallel features of mpi4py (True or False, default False)</span>
 <span class="sd">            :mpiarg: precise rank and size of communicator (tuple used if mpi=True)</span>
 <span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="n">comm</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">mpi</span><span class="o">=</span><span class="kc">False</span>
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="n">mpi</span><span class="o">=</span><span class="kc">True</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
         
@@ -80,13 +90,17 @@
             <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;figram&#39;</span>
         <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span> <span class="s1">&#39;RAW&#39;</span><span class="p">:</span>
             <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;igram&#39;</span>
-        <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span> <span class="s1">&#39;Etna&#39;</span><span class="p">:</span>
-            <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;igram_aps&#39;</span>
-        
+        <span class="k">elif</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MintPy&#39;</span><span class="p">,</span><span class="s1">&#39;mintpy&#39;</span><span class="p">]:</span>
+            <span class="c1">#Select info from ifgramStack</span>
+            <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;unwrapPhase&#39;</span>
         <span class="k">else</span> <span class="p">:</span>
             <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span><span class="s1">&#39;Format of H5file not known&#39;</span>
         
-        <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="c1">#dictionary</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">mpi</span> <span class="p">:</span>
+            <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="c1">#dictionary</span>
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span><span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">])[</span><span class="mi">1</span><span class="p">:]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">]</span>
         
@@ -97,11 +111,16 @@
                         <span class="n">ymin</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">y1</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">subregion</span><span class="o">.</span><span class="n">y2</span><span class="p">,</span> <span class="n">truncate</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">dividepxls</span><span class="p">(</span><span class="n">mpi</span><span class="p">,</span><span class="n">mpiarg</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">time</span>        <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;tims&#39;</span><span class="p">][:]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">links</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;Jmat&#39;</span><span class="p">][:]</span>                              <span class="c1">#2D (interf,time)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;bperp&#39;</span><span class="p">][:]</span>                             <span class="c1">#perpendicular baseline (interf)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">orddates</span>    <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;dates&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        
+        
+        <span class="k">if</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MintPy&#39;</span><span class="p">,</span><span class="s1">&#39;mintpy&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;bperp&#39;</span><span class="p">][:]</span>              
+            <span class="bp">self</span><span class="o">.</span><span class="n">mintpy2kfts</span><span class="p">(</span><span class="n">fin</span><span class="p">)</span>
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">time</span>        <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;tims&#39;</span><span class="p">][:]</span>                       <span class="c1">#time in decimal year wrt start </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">links</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;Jmat&#39;</span><span class="p">][:]</span>                       <span class="c1">#2D (interf,time)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;bperp&#39;</span><span class="p">][:]</span>                      <span class="c1">#perpendicular baseline (interf)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orddates</span>    <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;dates&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>          <span class="c1">#ordinal dates</span>
         
         <span class="k">if</span> <span class="n">subregion</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
             <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>   <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">][:,</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span><span class="p">,:]</span>     <span class="c1">#3D (interf,y,x)</span>
@@ -206,6 +225,28 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span> <span class="o">=</span> <span class="n">ny</span>
 
         <span class="k">return</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span></div>
+
+
+<div class="viewcode-block" id="SetupKF.mintpy2kfts"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.mintpy2kfts">[docs]</a>    <span class="k">def</span> <span class="nf">mintpy2kfts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fin</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Read and translate information in the hDF5 output of MintPy named ifgramStack.h5</span>
+<span class="sd">        Essentially reformat dates and build matrix mapping interferogram to time</span>
+<span class="sd">            :fin:  open HDF5 file </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="c1"># initialize class </span>
+        <span class="n">ylims</span><span class="p">,</span><span class="n">xlims</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">stack</span> <span class="o">=</span> <span class="n">BuildStack</span><span class="p">(</span><span class="n">verbose</span><span class="p">,</span><span class="n">ylims</span><span class="p">,</span><span class="n">xlims</span><span class="p">)</span>
+        
+        <span class="c1"># read date strings </span>
+        <span class="n">datestrings</span> <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">][:]</span>
+    
+        <span class="n">stack</span><span class="o">.</span><span class="n">ConnectMatrix</span><span class="p">(</span><span class="n">datestrings</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">Jmat</span>     <span class="c1"># get matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orddates</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">days</span>  <span class="c1"># ordinal dates </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="o">-</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="mf">365.25</span>    <span class="c1"># decimal years </span></div>
+        
+        
         
 <div class="viewcode-block" id="SetupKF.pxl_with_nodata"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.pxl_with_nodata">[docs]</a>    <span class="k">def</span> <span class="nf">pxl_with_nodata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">thres</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
@@ -350,7 +391,7 @@
         
 
 <div class="viewcode-block" id="initiatefileforKF"><a class="viewcode-back" href="../../fmt.html#kf.readinput.initiatefileforKF">[docs]</a><span class="k">def</span> <span class="nf">initiatefileforKF</span><span class="p">(</span><span class="n">statefile</span><span class="p">,</span> <span class="n">phasefile</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> 
-                           <span class="n">updtfile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">toverlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+                           <span class="n">updtfile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">toverlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">tshift</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">t_sep</span><span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Open h5py file for kalman filter.</span>
 <span class="sd">        :statefile: file name and location </span>
@@ -361,9 +402,12 @@
 <span class="sd">        :updtfile:  file name to store additional statistics about KF analysis</span>
 <span class="sd">        :comm:      communicator if MPI used (e.g. MPI.COMM_WORLD)</span>
 <span class="sd">        :toverlap:  number of overlaping timesteps with past solution (only if restart KF)</span>
+<span class="sd">        :tshift:    number of previously estimated phases (may be updated)</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-        
-    <span class="n">lent</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span><span class="n">toverlap</span>
+    
+   
+    <span class="n">lent</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">toverlap</span> <span class="c1">#length of saved record for latter update</span>
+    <span class="n">newt</span> <span class="o">=</span> <span class="n">lent</span> <span class="o">-</span> <span class="n">tshift</span>                 <span class="c1">#length of new optimized time steps</span>
     <span class="n">Ny</span><span class="p">,</span> <span class="n">Nx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">Ntot</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">Nx</span>
     <span class="n">m_err</span><span class="p">,</span> <span class="n">sig_eps</span><span class="p">,</span> <span class="n">sig_gam</span>  <span class="o">=</span> <span class="n">store</span>
     
@@ -424,11 +468,11 @@
     
     <span class="c1"># Save part of the innovation and Gain to have information </span>
     <span class="c1"># about the predictive power of the model </span>
-    <span class="n">innv</span> <span class="o">=</span> <span class="n">fupdt</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;mean_innov&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">lent</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    <span class="n">innv</span> <span class="o">=</span> <span class="n">fupdt</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;mean_innov&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">newt</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
     <span class="n">innv</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Mean innovation (or residual) for the last phase estimate at each time step&#39;</span>
-
+    
     <span class="c1"># about the convergence and sensitivity to data of model parameters</span>
-    <span class="n">gain</span> <span class="o">=</span> <span class="n">fupdt</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;param_gain&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">lent</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">L</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    <span class="n">gain</span> <span class="o">=</span> <span class="n">fupdt</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;param_gain&#39;</span><span class="p">,(</span><span class="n">Ny</span><span class="p">,</span><span class="n">Nx</span><span class="p">,</span><span class="n">newt</span><span class="p">,</span><span class="n">L</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
     <span class="n">gain</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;help&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Norm of the gain for the L model parameters at each time step&#39;</span>
 
     <span class="k">if</span> <span class="n">updtfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -478,7 +522,7 @@
 
 
 <h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../intro.html">1. Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../flow.html">2. KFTS-InSAR Workflow</a></li>
@@ -501,7 +545,7 @@
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
@@ -523,7 +567,7 @@
       &copy;2020, M. Dalaison & R. Jolivet.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
     </div>

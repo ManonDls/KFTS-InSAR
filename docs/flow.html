@@ -1,17 +1,18 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
     <title>2. Main workflow for KFTS-InSAR &#8212; KFTS-InSAR 0.0.1 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="3. Setting up the functional model" href="func.html" />
@@ -32,17 +33,143 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="main-workflow-for-kfts-insar">
+  <section id="main-workflow-for-kfts-insar">
 <h1><span class="section-number">2. </span>Main workflow for KFTS-InSAR<a class="headerlink" href="#main-workflow-for-kfts-insar" title="Permalink to this headline">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">kfts.py</span></code> is the main file of KFTS-InSAR. It reads configuration (.ini) and run the full KFTS-InSAR processing chain. Separate components are detailed in subsequent sections. A typical command to run the algorithm is <code class="docutils literal notranslate"><span class="pre">mpirun</span> <span class="pre">-n</span> <span class="pre">30</span> <span class="pre">python</span> <span class="pre">-u</span> <span class="pre">kfts.py</span> <span class="pre">-c</span> <span class="pre">myconfigfile.ini</span></code></p>
-<span class="target" id="module-kfts"></span><dl class="class">
-<dt id="kfts.RunKalmanFilter">
-<em class="property">class </em><code class="sig-prename descclassname">kfts.</code><code class="sig-name descname">RunKalmanFilter</code><span class="sig-paren">(</span><em class="sig-param">config</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kfts.RunKalmanFilter" title="Permalink to this definition">¶</a></dt>
+<section id="configuration-file">
+<h2><span class="section-number">2.1. </span>Configuration file<a class="headerlink" href="#configuration-file" title="Permalink to this headline">¶</a></h2>
+<p>Configuration parameters for KFTS are defined in a text file that will be read using the <code class="docutils literal notranslate"><span class="pre">configparser</span></code> module of python. Below is a reference configuration file.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>########################################
+###### Config file for KFTS-InSAR ###### 
+########################################
+
+[INPUT]
+
+# Reference directory from which other paths are defined
+workdir = /share/user/Yourfolder/
+
+# File containing interferograms
+infile  = Stack/PROC-STACK.h5
+
+# Format of infile (ISCE,RAW or Mintpy)
+# Only used to adjust the name of the interferograms key in &quot;infile&quot;
+fmtfile = ISCE
+
+# File containing previously computed TS (used only if UPDT is True)
+instate = States.h5 
+
+# File containing information about earthquake (used only if EQ is True)
+# X Y (in pxl number) time (in decimal year since start) radius_of_influence (in km) dx dy 
+eqinfo  = EQ_list.txt
+
+#####################################
+[OUTPUT]
+
+# Directory for output h5 file (States.h5 and Phases.h5)
+# The absolute path will be: workdir+outdsir
+outdir  = KF/
+
+# Directory for saving figures (used only if PLOT is True)
+# The absolute path will be: workdir+figdir
+figdir  = Figs/     
+
+#####################################
+[MODEL SETUP]
+
+# Is there earthquake to model? (if True, eqinfo required)
+EQ      = True
+
+# Frequency of oscillating signal (rad/year)
+freq    = 6.283185
+
+# Std of unmodeled phase delay 
+# (same unit as unwrapped interferograms (often mm))
+sig_y   = 10.0
+
+# Std of interferometric network misclosure 
+# (same unit as unwrapped interferograms)
+sig_i   = 0.01
+
+# Functional element of descriptiv model
+# see https://manondls.github.io/KFTS-InSAR/func.html
+model  = [(&#39;POLY&#39;,1),(&#39;SIN&#39;,${freq}),(&#39;COS&#39;,${freq})]
+
+# A priori std estimate of model parameters (mm)
+sig_a  = 25.,8.,8.,8.
+
+# Time delta after which temporally focused functions are not optimized anymore 
+# for steps in time (earthquakes) and constant terms (polynomial of order zero) 
+Dtime_max = 3.0 
+
+#####################################
+[KALMAN FILTER SETUP]
+
+# Print details?
+VERBOSE = False 
+
+# Create and save plots?
+PLOT    = False 
+
+# Start from previously computed state (in instate)?
+UPDT    = False
+
+# Minimum number of valid acquisition on a pixel
+pxlTh   = 1
+
+#####################################
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>see section 3 for details about model syntax.</p>
+</div>
+</section>
+<section id="routine-workflow">
+<h2><span class="section-number">2.2. </span>Routine workflow<a class="headerlink" href="#routine-workflow" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">kfts.py</span></code> is the main file of KFTS-InSAR. It reads the configuration file (.ini) and run the full KFTS-InSAR processing chain. Separate components are detailed in subsequent sections. A typical command to run the algorithm is</p>
+<p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-u</span> <span class="pre">kfts.py</span> <span class="pre">-c</span> <span class="pre">myconfigfile.ini</span></code></p>
+<p>To speed up the computation, we recommend to run the code in parallel with openMPI (pixel will be divided between processors). This requires a build of H5py and numpy modules of python with openMPI. For instance, using 30 processors :</p>
+<p><code class="docutils literal notranslate"><span class="pre">mpirun</span> <span class="pre">-n</span> <span class="pre">30</span> <span class="pre">python</span> <span class="pre">-u</span> <span class="pre">kfts.py</span> <span class="pre">-c</span> <span class="pre">myconfigfile.ini</span></code></p>
+<span class="target" id="module-kfts"></span><dl class="py class">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kfts.</span></span><span class="sig-name descname"><span class="pre">RunKalmanFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class to run the full KFTS-InSAR processing chain
 Read configuration and data. Setup parameters. Run KF for each pixel.</p>
 </dd></dl>
 
-</div>
+</section>
+<section id="outputs">
+<h2><span class="section-number">2.3. </span>Outputs<a class="headerlink" href="#outputs" title="Permalink to this headline">¶</a></h2>
+<p>There are 3 output HDF5 files containing the following datasets. For N interferograms with (<em>Y</em>, <em>X</em>) pixels over <em>M</em> timesteps, we have
+* the time series of phase change with respect to the first acquisition in <code class="docutils literal notranslate"><span class="pre">Phases.h5</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">dates</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Ordinal</span> <span class="pre">values</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">SAR</span> <span class="pre">acquisition</span> <span class="pre">dates</span>
+<span class="pre">idx0</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{SCALAR}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Index</span> <span class="pre">of</span> <span class="pre">first</span> <span class="pre">phase</span> <span class="pre">in</span> <span class="pre">file</span> <span class="pre">with</span> <span class="pre">respect</span> <span class="pre">to</span> <span class="pre">first</span> <span class="pre">reference</span> <span class="pre">date</span> <span class="pre">of</span> <span class="pre">time</span> <span class="pre">series</span>
+<span class="pre">rawts</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{Y,</span> <span class="pre">X,</span> <span class="pre">M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Reconstructed</span> <span class="pre">phases</span>
+<span class="pre">rawts_std</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{Y,</span> <span class="pre">X,</span> <span class="pre">M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Reconstructed</span> <span class="pre">phases</span> <span class="pre">standard</span> <span class="pre">deviation</span> <span class="pre">(sqrt</span> <span class="pre">of</span> <span class="pre">diag(state_cov))</span>
+<span class="pre">tims</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Decimal</span> <span class="pre">years</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">SAR</span> <span class="pre">acquisition</span> <span class="pre">dates</span>
+<span class="pre">`</span></code></p>
+</div></blockquote>
+<ul>
+<li><p>the state information at the last time step <code class="docutils literal notranslate"><span class="pre">States.h5</span></code>. This contains the <em>L</em> optimized parameters, as well as the <em>m</em> last phase observations (indices M, M-1, M-2, …, M-m+1), usefull to restart KFTS for later updates and associated covariances.</p>
+<p><a href="#id1"><span class="problematic" id="id2">``</span></a>`
+indx                     Dataset {m}              Indexes (with respect to first acquisition) of the phases kept in the state
+misclosure               Dataset {SCALAR}         Misclosure error included in data covariance (sig_i)
+mismodeling              Dataset {SCALAR}         Mismodeling error added as process noise on last phase estimate (sig_y)
+processnoise             Dataset {L}              Process noise for functional model parameters (default is ok)
+state                    Dataset {Y, X, L+m}      State vectors for each pixel
+state_cov                Dataset {Y, X, L+m, L+m} Covariances of state for each pixel
+tims                     Dataset {m}              Times corresponding to phases in state in decimal years with respect to first phase</p>
+</li>
+<li><p>metadata useful to evaluate the quality of the dataset, estimates and chosen parameters <code class="docutils literal notranslate"><span class="pre">Updates.h5</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">mean_innov</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{Y,</span> <span class="pre">X,</span> <span class="pre">M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Mean</span> <span class="pre">innovation</span> <span class="pre">(or</span> <span class="pre">residual)</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">last</span> <span class="pre">phase</span> <span class="pre">estimate</span> <span class="pre">at</span> <span class="pre">each</span> <span class="pre">time</span> <span class="pre">step</span>
+<span class="pre">param_gain</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{Y,</span> <span class="pre">X,</span> <span class="pre">M,</span> <span class="pre">L}</span>&#160;&#160;&#160;&#160; <span class="pre">Norm</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">gain</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">L</span> <span class="pre">model</span> <span class="pre">parameters</span> <span class="pre">at</span> <span class="pre">each</span> <span class="pre">time</span> <span class="pre">step</span>
+<span class="pre">`</span></code></p>
+</li>
+</ul>
+</section>
+</section>
 
 
           </div>
@@ -73,10 +200,15 @@ Read configuration and data. Setup parameters. Run KF for each pixel.</p>
 
 
 <h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="intro.html">1. Introduction</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">2. KFTS-InSAR Workflow</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">2. KFTS-InSAR Workflow</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-file">2.1. Configuration file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#routine-workflow">2.2. Routine workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#outputs">2.3. Outputs</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="func.html">3. Functional model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="kal.html">4. Kalman Filter</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fmt.html">5. Setup and formating</a></li>
@@ -96,7 +228,7 @@ Read configuration and data. Setup parameters. Run KF for each pixel.</p>
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
@@ -118,7 +250,7 @@ Read configuration and data. Setup parameters. Run KF for each pixel.</p>
       &copy;2020, M. Dalaison & R. Jolivet.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
