@@ -91,7 +91,8 @@ Args:</p>
 is available.</p>
 <dl class="simple">
 <dt>Args:</dt><dd><ul class="simple">
-<li><p>out       Output stack object</p></li>
+<li><p>data      Input stack object (interferograms)</p></li>
+<li><p>out       Output stack object (dataset will be overwritten)</p></li>
 </ul>
 </dd>
 <dt>Kwargs:</dt><dd><ul class="simple">
@@ -201,7 +202,7 @@ It can be used for GIAnT time series analysis.</p>
 <p>Processing steps contained in the main KFTS-InSAR routine.</p>
 <span class="target" id="module-kf.readinput"></span><dl class="py class">
 <dt class="sig sig-object py" id="kf.readinput.SetupKF">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">SetupKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ISCE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpiarg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subregion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">SetupKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ISCE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpiarg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subregion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cohTh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Class for reading and modifying interferograms for Kalman filtering.</dt><dd><dl class="field-list simple">
 <dt class="field-odd">h5file<span class="colon">:</span></dt>
@@ -230,6 +231,14 @@ It can be used for GIAnT time series analysis.</p>
 </dd>
 </dl>
 <dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.apply_input_mask">
+<span class="sig-name descname"><span class="pre">apply_input_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">maskfile</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.apply_input_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.apply_input_mask" title="Permalink to this definition">¶</a></dt>
+<dd><ul class="simple">
+<li><p>maskfile:  hdf5 file containing a ‘mask’ dataset of (Y,X) shape</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kf.readinput.SetupKF.create_R">
 <span class="sig-name descname"><span class="pre">create_R</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.create_R"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.create_R" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
@@ -249,6 +258,19 @@ It can be used for GIAnT time series analysis.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.filter_by_coherence">
+<span class="sig-name descname"><span class="pre">filter_by_coherence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cohTh</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.filter_by_coherence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.filter_by_coherence" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Open all interferograms and copy them and remove points below a given threshold</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fin<span class="colon">:</span></dt>
+<dd class="field-odd"><p>open HDF5 file containing a ‘coherence’ dataset</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kf.readinput.SetupKF.get_interf_pairs">
 <span class="sig-name descname"><span class="pre">get_interf_pairs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.get_interf_pairs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.get_interf_pairs" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
@@ -262,7 +284,7 @@ It can be used for GIAnT time series analysis.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kf.readinput.SetupKF.mintpy2kfts">
-<span class="sig-name descname"><span class="pre">mintpy2kfts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.mintpy2kfts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.mintpy2kfts" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">mintpy2kfts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fin</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.mintpy2kfts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.mintpy2kfts" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read and translate information in the hDF5 output of MintPy named ifgramStack.h5
 Essentially reformat dates and build matrix mapping interferogram to time</p>
 <blockquote>

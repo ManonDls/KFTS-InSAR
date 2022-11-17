@@ -62,7 +62,7 @@
 
 <div class="viewcode-block" id="SetupKF"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF">[docs]</a><span class="k">class</span> <span class="nc">SetupKF</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h5file</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;ISCE&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mpiarg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">subregion</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h5file</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;ISCE&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mpiarg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">subregion</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cohTh</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Class for reading and modifying interferograms for Kalman filtering.</span>
 <span class="sd">            :h5file: .h5 file path containing</span>
@@ -77,13 +77,12 @@
 <span class="sd">            :mpi:    do you use parallel features of mpi4py (True or False, default False)</span>
 <span class="sd">            :mpiarg: precise rank and size of communicator (tuple used if mpi=True)</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        
         <span class="k">if</span> <span class="n">comm</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
             <span class="n">mpi</span><span class="o">=</span><span class="kc">False</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">else</span> <span class="p">:</span> 
+        <span class="k">else</span> <span class="p">:</span>
             <span class="n">mpi</span><span class="o">=</span><span class="kc">True</span>
-        
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">comm</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
         
         <span class="c1">## Import and read Data</span>
@@ -100,7 +99,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mpi</span> <span class="p">:</span>
             <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="c1">#dictionary</span>
         <span class="k">else</span> <span class="p">:</span> 
-            <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span><span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+            <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span><span class="n">comm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">])[</span><span class="mi">1</span><span class="p">:]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">]</span>
@@ -115,7 +114,7 @@
         
         
         <span class="k">if</span>  <span class="n">fmt</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;MINTPY&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;bperp&#39;</span><span class="p">][:]</span>              
+            <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;bperp&#39;</span><span class="p">][:]</span> 
             <span class="bp">self</span><span class="o">.</span><span class="n">mintpy2kfts</span><span class="p">(</span><span class="n">fin</span><span class="p">)</span>
         <span class="k">else</span> <span class="p">:</span> 
             <span class="bp">self</span><span class="o">.</span><span class="n">time</span>        <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;tims&#39;</span><span class="p">][:]</span>                       <span class="c1">#time in decimal year wrt start </span>
@@ -128,8 +127,11 @@
         <span class="k">else</span> <span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">igram</span>   <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="n">intrfname</span><span class="p">][:,</span><span class="n">subregion</span><span class="o">.</span><span class="n">y1</span><span class="p">:</span><span class="n">subregion</span><span class="o">.</span><span class="n">y2</span><span class="p">,</span>
                                             <span class="n">subregion</span><span class="o">.</span><span class="n">x1</span><span class="p">:</span><span class="n">subregion</span><span class="o">.</span><span class="n">x2</span><span class="p">]</span>
-        
-        <span class="c1">#Ordinal date to decimal year</span>
+        <span class="c1"># Apply coherence threshold</span>
+        <span class="k">if</span> <span class="n">cohTh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter_by_coherence</span><span class="p">(</span><span class="n">fin</span><span class="p">,</span><span class="n">cohTh</span><span class="p">)</span>
+
+        <span class="c1"># Ordinal date to decimal year</span>
         <span class="n">init</span>      <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromordinal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orddates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="n">yr_start</span>  <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">init</span><span class="o">.</span><span class="n">year</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">toordinal</span><span class="p">()</span>
         <span class="n">yr_len</span>    <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">init</span><span class="o">.</span><span class="n">year</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">toordinal</span><span class="p">()</span> <span class="o">-</span> <span class="n">yr_start</span>
@@ -228,7 +230,7 @@
         <span class="k">return</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span></div>
 
 
-<div class="viewcode-block" id="SetupKF.mintpy2kfts"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.mintpy2kfts">[docs]</a>    <span class="k">def</span> <span class="nf">mintpy2kfts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fin</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="SetupKF.mintpy2kfts"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.mintpy2kfts">[docs]</a>    <span class="k">def</span> <span class="nf">mintpy2kfts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fin</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Read and translate information in the hDF5 output of MintPy named ifgramStack.h5</span>
 <span class="sd">        Essentially reformat dates and build matrix mapping interferogram to time</span>
@@ -237,7 +239,7 @@
         
         <span class="c1"># initialize class </span>
         <span class="n">ylims</span><span class="p">,</span><span class="n">xlims</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">stack</span> <span class="o">=</span> <span class="n">BuildStack</span><span class="p">(</span><span class="n">verbose</span><span class="p">,</span><span class="n">ylims</span><span class="p">,</span><span class="n">xlims</span><span class="p">)</span>
+        <span class="n">stack</span> <span class="o">=</span> <span class="n">BuildStack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span><span class="n">ylims</span><span class="p">,</span><span class="n">xlims</span><span class="p">)</span>
         
         <span class="c1"># read date strings </span>
         <span class="n">datestrings</span> <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">][:]</span>
@@ -246,8 +248,68 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">Jmat</span>     <span class="c1"># get matrix</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">orddates</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>  <span class="c1"># ordinal dates </span>
         <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="o">-</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="mf">365.25</span>    <span class="c1"># decimal years </span></div>
+    
+
+<div class="viewcode-block" id="SetupKF.filter_by_coherence"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.filter_by_coherence">[docs]</a>    <span class="k">def</span> <span class="nf">filter_by_coherence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fin</span><span class="p">,</span><span class="n">cohTh</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Open all interferograms and copy them and remove points below a given threshold</span>
+<span class="sd">            :fin: open HDF5 file containing a &#39;coherence&#39; dataset</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="c1"># create new file for iterative writing and storage</span>
+        <span class="n">newstackfile</span> <span class="o">=</span> <span class="n">fin</span><span class="o">.</span><span class="n">filename</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;_copy_maskedigram.h5&#39;</span>
         
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mpi</span> <span class="p">:</span>
+            <span class="n">fout</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">newstackfile</span><span class="p">,</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+        <span class="k">else</span> <span class="p">:</span> 
+            <span class="n">fout</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">newstackfile</span><span class="p">,</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-- Masking low coherence pixel in each interferogram --&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Coherence threshold is </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cohTh</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Create standardized source file </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">newstackfile</span><span class="p">))</span>  
+            
+        <span class="n">maskigram</span> <span class="o">=</span> <span class="n">fout</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;rawts_std&#39;</span><span class="p">,(</span><span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">Ntot</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Nx</span><span class="p">),</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ny</span><span class="p">):</span> <span class="c1">#each worker iterates over its own Y</span>
+            <span class="c1"># load coherence</span>
+            <span class="n">cohsub</span> <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;coherence&#39;</span><span class="p">][:,</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="o">+</span><span class="n">j</span><span class="p">,:]</span>
+            <span class="n">igrsub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="p">[:,</span><span class="n">j</span><span class="p">,:]</span>
+            
+            <span class="c1"># replace  by NaN</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">cohsub</span> <span class="o">&lt;</span> <span class="n">cohTh</span><span class="p">)</span>
+            <span class="n">igrsub</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            
+            <span class="c1"># write to file</span>
+            <span class="n">maskigram</span><span class="p">[:,</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="o">+</span><span class="n">j</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">igrsub</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">igram</span> <span class="o">=</span> <span class="n">maskigram</span><span class="p">[:,</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span><span class="p">,:]</span></div>
+
+<div class="viewcode-block" id="SetupKF.apply_input_mask"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.apply_input_mask">[docs]</a>    <span class="k">def</span> <span class="nf">apply_input_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">maskfile</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        * maskfile:  hdf5 file containing a &#39;mask&#39; dataset of (Y,X) shape</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-- Masking pixels according to a loaded mask --&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Input mask is in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">maskfile</span><span class="p">))</span>
+
+        <span class="c1"># open file</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mpi</span> <span class="p">:</span>
+            <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">maskfile</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">maskfile</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">driver</span><span class="o">=</span><span class="s1">&#39;mpio&#39;</span><span class="p">,</span><span class="n">comm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
+        
+        <span class="c1"># create mask of right size (worker specific if MPI)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">igram</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> 
+        <span class="n">mask</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;mask&#39;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">miny</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">maxy</span><span class="p">,:]</span> 
+        <span class="n">fin</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="s1">&#39;mask&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">*=</span> <span class="n">mask</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span></div>
+
+
 <div class="viewcode-block" id="SetupKF.pxl_with_nodata"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.pxl_with_nodata">[docs]</a>    <span class="k">def</span> <span class="nf">pxl_with_nodata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">thres</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Check for pixels with little data and build mask.</span>

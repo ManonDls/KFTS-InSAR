@@ -29,7 +29,7 @@ class Subregion():
 
 class SetupKF(object):
 
-    def __init__(self, h5file, fmt='ISCE', comm=False, mpiarg=0, verbose=True, subregion=None):
+    def __init__(self, h5file, fmt='ISCE', comm=False, mpiarg=0, verbose=True, subregion=None, cohTh=None):
         '''
         Class for reading and modifying interferograms for Kalman filtering.
             :h5file: .h5 file path containing
@@ -44,13 +44,12 @@ class SetupKF(object):
             :mpi:    do you use parallel features of mpi4py (True or False, default False)
             :mpiarg: precise rank and size of communicator (tuple used if mpi=True)
         '''
-        
         if comm == False:
             mpi=False
-            self.rank = 0
-        else : 
+        else :
             mpi=True
-        
+
+        self.comm = comm
         self.verbose = verbose
         
         ## Import and read Data
@@ -67,7 +66,7 @@ class SetupKF(object):
         if not mpi :
             fin = h5py.File(h5file,'r') #dictionary
         else : 
-            fin = h5py.File(h5file,'r',driver='mpio',comm=comm)
+            fin = h5py.File(h5file,'r',driver='mpio',comm=self.comm)
 
         self.Ny, self.Nx = np.shape(fin[intrfname])[1:]
         self.igram       = fin[intrfname]
@@ -82,7 +81,7 @@ class SetupKF(object):
         
         
         if  fmt.upper() == 'MINTPY':
-            self.bperp       = fin['bperp'][:]              
+            self.bperp       = fin['bperp'][:] 
             self.mintpy2kfts(fin)
         else : 
             self.time        = fin['tims'][:]                       #time in decimal year wrt start 
@@ -95,8 +94,11 @@ class SetupKF(object):
         else :
             self.igram   = fin[intrfname][:,subregion.y1:subregion.y2,
                                             subregion.x1:subregion.x2]
-        
-        #Ordinal date to decimal year
+        # Apply coherence threshold
+        if cohTh is not None:
+            self.filter_by_coherence(fin,cohTh)
+
+        # Ordinal date to decimal year
         init      = dt.datetime.fromordinal(self.orddates[0])
         yr_start  = dt.date(init.year,1,1).toordinal()
         yr_len    = dt.date(init.year+1,1,1).toordinal() - yr_start
@@ -195,7 +197,7 @@ class SetupKF(object):
         return x,y
 
 
-    def mintpy2kfts(self,fin,verbose=True):
+    def mintpy2kfts(self,fin):
         '''
         Read and translate information in the hDF5 output of MintPy named ifgramStack.h5
         Essentially reformat dates and build matrix mapping interferogram to time
@@ -204,7 +206,7 @@ class SetupKF(object):
         
         # initialize class 
         ylims,xlims = (0,-1), (0,-1)
-        stack = BuildStack(verbose,ylims,xlims)
+        stack = BuildStack(self.verbose,ylims,xlims)
         
         # read date strings 
         datestrings = fin['date'][:]
@@ -213,8 +215,68 @@ class SetupKF(object):
         self.links = stack.Jmat     # get matrix
         self.orddates = stack.days.astype(int)  # ordinal dates 
         self.time = (stack.days-stack.days[0])/365.25    # decimal years 
+    
+
+    def filter_by_coherence(self,fin,cohTh):
+        '''
+        Open all interferograms and copy them and remove points below a given threshold
+            :fin: open HDF5 file containing a 'coherence' dataset
+        '''
+
+        # create new file for iterative writing and storage
+        newstackfile = fin.filename[:-3]+'_copy_maskedigram.h5'
         
+        if not self.mpi :
+            fout = h5py.File(newstackfile,'a')
+        else : 
+            fout = h5py.File(newstackfile,'a', driver='mpio', comm=self.comm)
+            
+        if self.rank==0 and self.verbose:
+            print('-- Masking low coherence pixel in each interferogram --')
+            print('Coherence threshold is {}'.format(cohTh))
+            print('Create standardized source file {}'.format(newstackfile))  
+            
+        maskigram = fout.create_dataset('rawts_std',(self.igram.shape[0],self.Ntot,self.Nx),'f')
+        for j in range(0, self.Ny): #each worker iterates over its own Y
+            # load coherence
+            cohsub = fin['coherence'][:,self.miny+j,:]
+            igrsub = self.igram[:,j,:]
+            
+            # replace  by NaN
+            mask = (cohsub < cohTh)
+            igrsub[mask] = np.nan
+            
+            # write to file
+            maskigram[:,self.miny+j,:] = igrsub
+
+        self.igram = maskigram[:,self.miny:self.maxy,:]
+
+    def apply_input_mask(self,maskfile):
+        '''
+        * maskfile:  hdf5 file containing a 'mask' dataset of (Y,X) shape
+        '''
         
+        if self.rank==0 and self.verbose:
+            print('-- Masking pixels according to a loaded mask --')
+            print('Input mask is in {}'.format(maskfile))
+
+        # open file
+        if not self.mpi :
+            fin = h5py.File(maskfile,'r')
+        else :
+            fin = h5py.File(maskfile,'r',driver='mpio',comm=self.comm)
+        
+        # create mask of right size (worker specific if MPI)
+        mask = np.zeros(self.igram.shape[1:]) 
+        mask[:] = fin['mask'][self.miny:self.maxy,:] 
+        fin.close()
+        
+        if hasattr(self,'mask'):
+            self.mask *= mask
+        else:
+            self.mask = mask
+
+
     def pxl_with_nodata(self,thres=30, chunks=200, plot=False) :
         '''
         Check for pixels with little data and build mask.

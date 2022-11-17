@@ -51,19 +51,26 @@ class RunKalmanFilter(object):
             :config: open config file (.ini format)
         '''
         
+        #---------------
+        # INPUT info
         loc   = os.path.abspath(config['INPUT'].get('workdir', fallback='./'))
         assert os.path.isdir(loc), "working directory {} defined in {} does not exist".format(loc,config)
         
         self.infile  = os.path.join(loc, config['INPUT'].get('infile'))
         self.fmtfile = config['INPUT'].get('fmtfile', fallback='ISCE')
+        
+        # optional
         self.instate = config['INPUT'].get('instate', fallback=None)
         self.eqinfo  = config['INPUT'].get('eqinfo', fallback=None)
+        self.mask    = config['INPUT'].get('maskfile', fallback=None)
 
         if self.instate is not None:
             self.instate = os.path.join(loc, self.instate)
         if self.eqinfo is not None:
             self.eqinfo = os.path.join(loc, self.eqinfo)
-            
+        if self.mask is not None:
+            self.mask = os.path.join(loc, self.mask)
+
         self.outdir = os.path.join(loc, config['OUTPUT'].get('outdir', fallback=''))
         self.figdir = os.path.join(loc, config['OUTPUT'].get('figdir', fallback=''))
         
@@ -71,6 +78,8 @@ class RunKalmanFilter(object):
         os.makedirs(self.outdir,exist_ok=True)
         os.makedirs(self.figdir,exist_ok=True)
         
+        #---------------
+        # MODEL info
         secMS      = config['MODEL SETUP']
         self.EQ    = secMS.getboolean('EQ', fallback = False)
         freq       = secMS.getfloat('freq', fallback = 2*np.pi)
@@ -89,17 +98,20 @@ class RunKalmanFilter(object):
         self.sig_a = literal_eval(secMS.get('sig_a'))
         self.sig_a = list(self.sig_a)
         
-        
+        #---------------
+        # Parameters for KFTS
         secKFS       = config['KALMAN FILTER SETUP']
-        self.VERBOSE = secKFS.getboolean('VERBOSE', fallback = False)
+        self.VERBOSE = secKFS.getboolean('VERBOSE', fallback = True)
         self.PLOT    = secKFS.getboolean('PLOT', fallback = False)
         self.UPDT    = secKFS.getboolean('UPDT', fallback = False)
         self.pxlTh   = secKFS.getint('pxlTh', fallback = 1)
-        
+        self.cohTh   = secKFS.getfloat('cohTh', fallback = None)
+
         if self.isTraceOn():
             print("Functional model string is: {}".format(self.model))
             print("Exclude pixels with less than {} valid interferograms".format(self.pxlTh)) 
 
+        #---------------
         ## Optional section
         # initialize
         self.subregion = None
@@ -130,12 +142,16 @@ class RunKalmanFilter(object):
             mpiarg = (self.rank,self.size), 
             fmt = self.fmtfile, 
             verbose = self.VERBOSE,
-            subregion = self.subregion
-            )
+            subregion = self.subregion,
+            cohTh = self.cohTh )
 
         # Chose subset around fault 
         #data.select_pxl_band(x,y,0.48,-750,-650) 
         
+        # Load previously defined mask 
+        if self.mask is not None:
+            data.apply_input_mask(self.mask)
+
         # Record indexes of empty pixels
         data.pxl_with_nodata(thres = self.pxlTh, plot = self.PLOT)
         

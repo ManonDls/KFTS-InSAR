@@ -459,10 +459,12 @@
         <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buildAmat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">,</span><span class="n">X</span><span class="p">,</span><span class="n">Y</span><span class="p">)</span>
         <span class="n">dphs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="o">-</span><span class="n">A</span><span class="p">,</span><span class="n">ramppoly</span><span class="p">)</span>
         <span class="k">del</span> <span class="n">A</span>
-        
+       
+        <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">phs</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">)</span> <span class="c1">#save where zeros as NaN</span>
         <span class="n">dphs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dphs</span><span class="p">,(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">))</span>
         <span class="n">dphs</span> <span class="o">=</span> <span class="n">phs</span> <span class="o">+</span> <span class="n">dphs</span>
-    
+        <span class="n">dphs</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span> 
+
         <span class="k">return</span> <span class="n">dphs</span></div>
     
 <div class="viewcode-block" id="BuildStack.deramp"><a class="viewcode-back" href="../fmt.html#prepare_input.BuildStack.deramp">[docs]</a>    <span class="k">def</span> <span class="nf">deramp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">poly</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">dref</span><span class="o">=</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)]):</span>
@@ -471,7 +473,8 @@
 <span class="sd">        is available. </span>
 <span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            * out       Output stack object</span>
+<span class="sd">            * data      Input stack object (interferograms)</span>
+<span class="sd">            * out       Output stack object (dataset will be overwritten)</span>
 <span class="sd">        </span>
 <span class="sd">        Kwargs:</span>
 <span class="sd">            * network   Network deramping or individual deramping</span>
@@ -510,7 +513,8 @@
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Get ramp for each interferogram&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">kkk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nslice</span><span class="p">):</span>
             <span class="n">dat</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">kkk</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
-    
+            <span class="n">dat</span><span class="p">[</span><span class="n">dat</span><span class="o">==</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
             <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
             <span class="n">masktmp</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span><span class="n">maskref</span>
     
