@@ -80,21 +80,22 @@
         
         <span class="k">if</span> <span class="n">comm</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
             <span class="n">mpi</span><span class="o">=</span><span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span> <span class="p">:</span> 
             <span class="n">mpi</span><span class="o">=</span><span class="kc">True</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
         
         <span class="c1">## Import and read Data</span>
-        <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="s1">&#39;ISCE&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">fmt</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;ISCE&#39;</span><span class="p">:</span>
             <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;figram&#39;</span>
-        <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span> <span class="s1">&#39;RAW&#39;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">fmt</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;RAW&#39;</span><span class="p">:</span>
             <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;igram&#39;</span>
-        <span class="k">elif</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MintPy&#39;</span><span class="p">,</span><span class="s1">&#39;mintpy&#39;</span><span class="p">]:</span>
+        <span class="k">elif</span> <span class="n">fmt</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;MINTPY&#39;</span><span class="p">:</span>
             <span class="c1">#Select info from ifgramStack</span>
             <span class="n">intrfname</span> <span class="o">=</span> <span class="s1">&#39;unwrapPhase&#39;</span>
         <span class="k">else</span> <span class="p">:</span>
-            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span><span class="s1">&#39;Format of H5file not known&#39;</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span><span class="s2">&quot;Specified format </span><span class="si">{}</span><span class="s2"> of H5file not known&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mpi</span> <span class="p">:</span>
             <span class="n">fin</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5file</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="c1">#dictionary</span>
@@ -113,7 +114,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">dividepxls</span><span class="p">(</span><span class="n">mpi</span><span class="p">,</span><span class="n">mpiarg</span><span class="p">)</span>
         
         
-        <span class="k">if</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MintPy&#39;</span><span class="p">,</span><span class="s1">&#39;mintpy&#39;</span><span class="p">]:</span>
+        <span class="k">if</span>  <span class="n">fmt</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;MINTPY&#39;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">bperp</span>       <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;bperp&#39;</span><span class="p">][:]</span>              
             <span class="bp">self</span><span class="o">.</span><span class="n">mintpy2kfts</span><span class="p">(</span><span class="n">fin</span><span class="p">)</span>
         <span class="k">else</span> <span class="p">:</span> 
@@ -240,12 +241,11 @@
         
         <span class="c1"># read date strings </span>
         <span class="n">datestrings</span> <span class="o">=</span> <span class="n">fin</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">][:]</span>
-    
-        <span class="n">stack</span><span class="o">.</span><span class="n">ConnectMatrix</span><span class="p">(</span><span class="n">datestrings</span><span class="p">)</span>
+ 
+        <span class="n">stack</span><span class="o">.</span><span class="n">ConnectMatrix</span><span class="p">(</span><span class="n">datestrings</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">Jmat</span>     <span class="c1"># get matrix</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">orddates</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">days</span>  <span class="c1"># ordinal dates </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orddates</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>  <span class="c1"># ordinal dates </span>
         <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="o">-</span><span class="n">stack</span><span class="o">.</span><span class="n">days</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="mf">365.25</span>    <span class="c1"># decimal years </span></div>
-        
         
         
 <div class="viewcode-block" id="SetupKF.pxl_with_nodata"><a class="viewcode-back" href="../../fmt.html#kf.readinput.SetupKF.pxl_with_nodata">[docs]</a>    <span class="k">def</span> <span class="nf">pxl_with_nodata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">thres</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="p">:</span>

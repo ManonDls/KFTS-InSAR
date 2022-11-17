@@ -365,6 +365,10 @@
         <span class="n">Uts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datenum</span><span class="p">(</span><span class="n">uscenes</span><span class="p">)</span> <span class="c1">#ordinal dates</span>
         <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">Uts</span><span class="p">)</span> <span class="c1">#Increasing order of time</span>
         <span class="n">uscenes</span> <span class="o">=</span> <span class="n">uscenes</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">dates</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">uscenes</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span> <span class="c1">#check if bytes </span>
+            <span class="n">dates</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="n">uscenes</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
 
         <span class="n">ConnMat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">Nifg</span><span class="p">,</span><span class="n">Nsar</span><span class="p">))</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nifg</span><span class="p">):</span>

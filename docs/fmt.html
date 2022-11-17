@@ -37,15 +37,27 @@
 <h1><span class="section-number">5. </span>Setup and formating for KF<a class="headerlink" href="#setup-and-formating-for-kf" title="Permalink to this headline">¶</a></h1>
 <section id="prepare-inputs">
 <h2><span class="section-number">5.1. </span>Prepare inputs<a class="headerlink" href="#prepare-inputs" title="Permalink to this headline">¶</a></h2>
+<section id="format">
+<h3><span class="section-number">5.1.1. </span>Format<a class="headerlink" href="#format" title="Permalink to this headline">¶</a></h3>
 <p>KFTS-InSAR reads an HDF5 file containing the interferogram stack. It can contain the following dataset, although other format are suported, for <em>N</em> interferograms of (<em>Y</em>, <em>X</em>) pixels linking <em>M</em> acquisitions</p>
-<p><code class="docutils literal notranslate"><span class="pre">`</span>
-<span class="pre">Jmat</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{N,</span> <span class="pre">M}</span>&#160;&#160;&#160;&#160; <span class="pre">Connectivity</span> <span class="pre">matrix</span> <span class="pre">[-1,1,0]</span>
-<span class="pre">bperp</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{N}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Perpendicular</span> <span class="pre">baseline</span> <span class="pre">array</span> <span class="pre">(not</span> <span class="pre">used</span> <span class="pre">by</span> <span class="pre">KFTS</span> <span class="pre">yet)</span>
-<span class="pre">dates</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Array</span> <span class="pre">of</span> <span class="pre">ordinal</span> <span class="pre">values</span> <span class="pre">for</span> <span class="pre">SAR</span> <span class="pre">acquisition</span> <span class="pre">dates</span>
-<span class="pre">figram</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{N,</span> <span class="pre">Y,</span> <span class="pre">X}</span>&#160; <span class="pre">Array</span> <span class="pre">of</span> <span class="pre">interferograms</span>
-<span class="pre">tims</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Array</span> <span class="pre">of</span> <span class="pre">SAR</span> <span class="pre">acquisition</span> <span class="pre">times</span> <span class="pre">in</span> <span class="pre">decimal</span> <span class="pre">years</span>
-<span class="pre">`</span></code>
-.. note:: KFTS is able to read <code class="docutils literal notranslate"><span class="pre">MintPy</span></code> ifgramStack file.</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<p>Jmat            Dataset {N, M}     Connectivity matrix [-1,1,0]
+bperp           Dataset {N}        Perpendicular baseline array (not used by KFTS yet)
+dates           Dataset {M}        Array of ordinal values for SAR acquisition dates
+figram          Dataset {N, Y, X}  Array of interferograms
+tims            Dataset {M}        Array of SAR acquisition times in decimal years</p>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>KFTS is able to read <code class="docutils literal notranslate"><span class="pre">MintPy</span></code> ifgramStack file without the use of the <cite>prepare_input.py</cite> routine</p>
+</div>
+</section>
+<section id="prepare-input-interferogram-stack-optional">
+<h3><span class="section-number">5.1.2. </span>Prepare input interferogram stack [optional]<a class="headerlink" href="#prepare-input-interferogram-stack-optional" title="Permalink to this headline">¶</a></h3>
+<p>Preprocessing only useful if the HDF5 file discribed above has to be constructed. Functions are optimized for ISCE architecture.</p>
 <span class="target" id="module-prepare_input"></span><dl class="py class">
 <dt class="sig sig-object py" id="prepare_input.BuildStack">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prepare_input.</span></span><span class="sig-name descname"><span class="pre">BuildStack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlims</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/prepare_input.html#BuildStack"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#prepare_input.BuildStack" title="Permalink to this definition">¶</a></dt>
@@ -186,9 +198,11 @@ It can be used for GIAnT time series analysis.</p>
 </dd></dl>
 
 </section>
-<section id="module-kf.readinput">
-<span id="read-and-formate-data"></span><h2><span class="section-number">5.2. </span>Read and formate data<a class="headerlink" href="#module-kf.readinput" title="Permalink to this headline">¶</a></h2>
-<dl class="py class">
+</section>
+<section id="read-and-formate-data">
+<h2><span class="section-number">5.2. </span>Read and formate data<a class="headerlink" href="#read-and-formate-data" title="Permalink to this headline">¶</a></h2>
+<p>Processing steps contained in the main KFTS-InSAR routine.</p>
+<span class="target" id="module-kf.readinput"></span><dl class="py class">
 <dt class="sig sig-object py" id="kf.readinput.SetupKF">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">SetupKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ISCE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpiarg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subregion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
@@ -359,9 +373,10 @@ default are all pixels (0,Nx,0,Ny)</p>
 </dd></dl>
 
 </section>
-<section id="module-0">
-<span id="create-or-open-storage-file"></span><h2><span class="section-number">5.3. </span>Create or open storage file<a class="headerlink" href="#module-0" title="Permalink to this headline">¶</a></h2>
-<dl class="py function">
+<section id="create-or-open-storage-file">
+<h2><span class="section-number">5.3. </span>Create or open storage file<a class="headerlink" href="#create-or-open-storage-file" title="Permalink to this headline">¶</a></h2>
+<p>Processing steps contained in the main KFTS-InSAR routine. Storage files, or outputs are described in Section 2.3.</p>
+<span class="target" id="module-0"></span><dl class="py function">
 <dt class="sig sig-object py" id="kf.readinput.initiatefileforKF">
 <span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">initiatefileforKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">statefile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phasefile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updtfile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">toverlap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tshift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#initiatefileforKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.initiatefileforKF" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
@@ -444,8 +459,8 @@ default are all pixels (0,Nx,0,Ny)</p>
 <li class="toctree-l1"><a class="reference internal" href="kal.html">4. Kalman Filter</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">5. Setup and formating</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#prepare-inputs">5.1. Prepare inputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-kf.readinput">5.2. Read and formate data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-0">5.3. Create or open storage file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#read-and-formate-data">5.2. Read and formate data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#create-or-open-storage-file">5.3. Create or open storage file</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="test.html">6. Synthetic data</a></li>

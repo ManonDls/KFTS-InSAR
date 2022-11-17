@@ -4,22 +4,34 @@ Setup and formating for KF
 Prepare inputs
 ==============
 
+Format 
+-------
+
 KFTS-InSAR reads an HDF5 file containing the interferogram stack. It can contain the following dataset, although other format are suported, for *N* interferograms of (*Y*, *X*) pixels linking *M* acquisitions
 
-```
-Jmat            Dataset {N, M}     Connectivity matrix [-1,1,0]
-bperp           Dataset {N}        Perpendicular baseline array (not used by KFTS yet)
-dates           Dataset {M}        Array of ordinal values for SAR acquisition dates
-figram          Dataset {N, Y, X}  Array of interferograms 
-tims            Dataset {M}        Array of SAR acquisition times in decimal years
-```
-.. note:: KFTS is able to read ``MintPy`` ifgramStack file. 
+    .. code-block:: 
+    Jmat            Dataset {N, M}     Connectivity matrix [-1,1,0]
+    bperp           Dataset {N}        Perpendicular baseline array (not used by KFTS yet)
+    dates           Dataset {M}        Array of ordinal values for SAR acquisition dates
+    figram          Dataset {N, Y, X}  Array of interferograms 
+    tims            Dataset {M}        Array of SAR acquisition times in decimal years
+
+
+.. note:: KFTS is able to read ``MintPy`` ifgramStack file without the use of the `prepare_input.py` routine 
+
+Prepare input interferogram stack [optional] 
+--------------------------------------------
+
+Preprocessing only useful if the HDF5 file discribed above has to be constructed. Functions are optimized for ISCE architecture. 
 
 .. automodule:: prepare_input
     :members:
 
+
 Read and formate data 
 =====================
+
+Processing steps contained in the main KFTS-InSAR routine. 
 
 .. automodule:: kf.readinput
 .. autoclass:: SetupKF
@@ -27,6 +39,8 @@ Read and formate data
 
 Create or open storage file
 ===========================
+
+Processing steps contained in the main KFTS-InSAR routine. Storage files, or outputs are described in Section 2.3. 
 
 .. automodule:: kf.readinput
     :members: initiatefileforKF, reopenfileforKF

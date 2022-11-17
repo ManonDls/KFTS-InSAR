@@ -69,17 +69,17 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">initMpi</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setConfiguration</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">initMpi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.initMpi"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.initMpi">[docs]</a>    <span class="k">def</span> <span class="nf">initMpi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39; Initiate communication of the Message Passing Interface (MPI)&#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="c1">#disable MPI</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="kc">False</span></div>
 
 
-    <span class="k">def</span> <span class="nf">setConfiguration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.setConfiguration"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.setConfiguration">[docs]</a>    <span class="k">def</span> <span class="nf">setConfiguration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Read configuration file and convert to python objects.</span>
 <span class="sd">            :config: open config file (.ini format)</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -145,9 +145,9 @@
                 <span class="n">x1</span><span class="p">,</span><span class="n">x2</span><span class="p">,</span><span class="n">y1</span><span class="p">,</span><span class="n">y2</span> <span class="o">=</span> <span class="n">literal_eval</span><span class="p">(</span><span class="n">secFT</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;limval&#39;</span><span class="p">,</span><span class="n">fallback</span> <span class="o">=</span> <span class="s1">&#39;0,0,0,0&#39;</span><span class="p">))</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">subregion</span> <span class="o">=</span> <span class="n">infmt</span><span class="o">.</span><span class="n">Subregion</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">)</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: select subregion&quot;</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: select subregion&quot;</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">)</span></div>
     
-    <span class="k">def</span> <span class="nf">readData</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.readData"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.readData">[docs]</a>    <span class="k">def</span> <span class="nf">readData</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Initiate the data class dealing with interferograms, time,</span>
 <span class="sd">        spatial grid and mask. It</span>
 <span class="sd">            #. reads data</span>
@@ -181,9 +181,9 @@
         <span class="c1"># Print properties of data and keep it stored in there</span>
         <span class="n">data</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
         
-        <span class="k">return</span> <span class="n">data</span>
+        <span class="k">return</span> <span class="n">data</span></div>
 
-    <span class="k">def</span> <span class="nf">earthquakeIntegration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.earthquakeIntegration"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.earthquakeIntegration">[docs]</a>    <span class="k">def</span> <span class="nf">earthquakeIntegration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39; Add step function to the functional model of deformation</span>
 <span class="sd">        to model coseismic displacement due to earthquakes.</span>
 <span class="sd">        Require a file containing earthquake properties in the track</span>
@@ -231,9 +231,9 @@
             <span class="n">fct</span><span class="p">[</span><span class="n">fct</span> <span class="o">&lt;</span> <span class="mf">1.</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span> <span class="c1"># below an std of 1, approximate to zero (parameter not-optimized)</span>
             <span class="n">P0eq</span><span class="p">[:,:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">fct</span>
 
-        <span class="k">return</span> <span class="n">Leq</span><span class="p">,</span><span class="n">P0eq</span>
+        <span class="k">return</span> <span class="n">Leq</span><span class="p">,</span><span class="n">P0eq</span></div>
     
-    <span class="k">def</span> <span class="nf">loadcheck_pastoutputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">tfct</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.loadcheck_pastoutputs"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.loadcheck_pastoutputs">[docs]</a>    <span class="k">def</span> <span class="nf">loadcheck_pastoutputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">tfct</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Check input file consitency when restarting and frame time series update </span>
 <span class="sd">            * *data* : initiated data class (new interferograms)</span>
@@ -266,10 +266,10 @@
             <span class="k">if</span> <span class="n">tfct</span><span class="o">.</span><span class="n">Cstindex</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span> 
                 <span class="bp">self</span><span class="o">.</span><span class="n">dtmax</span>  <span class="o">==</span> <span class="kc">None</span>
         
-        <span class="k">return</span> <span class="n">finstate</span><span class="p">,</span> <span class="n">statetime</span><span class="p">,</span> <span class="n">indxs</span><span class="p">,</span> <span class="n">toverl</span>
+        <span class="k">return</span> <span class="n">finstate</span><span class="p">,</span> <span class="n">statetime</span><span class="p">,</span> <span class="n">indxs</span><span class="p">,</span> <span class="n">toverl</span></div>
         
 
-    <span class="k">def</span> <span class="nf">initCovariances</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">L</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.initCovariances"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.initCovariances">[docs]</a>    <span class="k">def</span> <span class="nf">initCovariances</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">L</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Create arrays for the initial state Covariance matrix (P0)</span>
 <span class="sd">        and the process noise covariance (Q).</span>
 <span class="sd">            :L: Initial length of the state vector</span>
@@ -280,9 +280,9 @@
         <span class="n">m_err</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>           <span class="c1"># Incertitude sur parametres</span>
         <span class="n">phi_err</span> <span class="o">=</span> <span class="mf">0.0</span>                   <span class="c1"># Incertitude sur interfero</span>
         <span class="n">add_err</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_y</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>       <span class="c1"># Uncertainty on newly added phase</span>
-        <span class="k">return</span> <span class="n">P_par</span><span class="p">,</span> <span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span>
+        <span class="k">return</span> <span class="n">P_par</span><span class="p">,</span> <span class="n">m_err</span><span class="p">,</span> <span class="n">phi_err</span><span class="p">,</span> <span class="n">add_err</span></div>
 
-    <span class="k">def</span> <span class="nf">initPlot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">figdir</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.initPlot"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.initPlot">[docs]</a>    <span class="k">def</span> <span class="nf">initPlot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">figdir</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Draw quick plots to visualize input data:</span>
 <span class="sd">            * Data plot</span>
 <span class="sd">            * baseline plot</span>
@@ -292,13 +292,13 @@
         <span class="kn">import</span> <span class="nn">kf.makeplot</span> <span class="k">as</span> <span class="nn">mplt</span>
         <span class="n">mplt</span><span class="o">.</span><span class="n">view_data</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">igram</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">igram</span><span class="p">)[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">figdir</span><span class="p">)</span>
         <span class="n">mplt</span><span class="o">.</span><span class="n">view_mask</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span> <span class="n">figdir</span><span class="p">)</span>
-        <span class="n">mplt</span><span class="o">.</span><span class="n">plot_baselines</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">bperp</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">imoins</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">iplus</span><span class="p">,</span> <span class="n">figdir</span><span class="p">)</span>
+        <span class="n">mplt</span><span class="o">.</span><span class="n">plot_baselines</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">bperp</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">imoins</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">iplus</span><span class="p">,</span> <span class="n">figdir</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">isTraceOn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.isTraceOn"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.isTraceOn">[docs]</a>    <span class="k">def</span> <span class="nf">isTraceOn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Print only if verbose activated and first parallel worker&#39;&#39;&#39;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> 
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> </div>
 
-    <span class="k">def</span> <span class="nf">launch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="RunKalmanFilter.launch"><a class="viewcode-back" href="../flow.html#kfts.RunKalmanFilter.launch">[docs]</a>    <span class="k">def</span> <span class="nf">launch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Combine procedures to prepare data and model, then</span>
 <span class="sd">        launch the Kalman filter class on each pixel row by row</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -406,7 +406,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">UPDT</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
             <span class="n">finstate</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Time for Kalman filter : </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">kf_start</span><span class="p">))</span></div>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Time for Kalman filter : </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">kf_start</span><span class="p">))</span></div></div>
 
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>

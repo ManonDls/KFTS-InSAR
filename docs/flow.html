@@ -134,6 +134,92 @@ pxlTh   = 1
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kfts.</span></span><span class="sig-name descname"><span class="pre">RunKalmanFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class to run the full KFTS-InSAR processing chain
 Read configuration and data. Setup parameters. Run KF for each pixel.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.earthquakeIntegration">
+<span class="sig-name descname"><span class="pre">earthquakeIntegration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.earthquakeIntegration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.earthquakeIntegration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add step function to the functional model of deformation
+to model coseismic displacement due to earthquakes.
+Require a file containing earthquake properties in the track
+reference frame (see earthquake2step.py).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.initCovariances">
+<span class="sig-name descname"><span class="pre">initCovariances</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.initCovariances"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.initCovariances" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create arrays for the initial state Covariance matrix (P0)
+and the process noise covariance (Q).</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">L<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Initial length of the state vector
+(number of model parameter + 1 (for reference phase))</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.initMpi">
+<span class="sig-name descname"><span class="pre">initMpi</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.initMpi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.initMpi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initiate communication of the Message Passing Interface (MPI)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.initPlot">
+<span class="sig-name descname"><span class="pre">initPlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figdir</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.initPlot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.initPlot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw quick plots to visualize input data:
+* Data plot
+* baseline plot
+* spatial mask on pixel</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.isTraceOn">
+<span class="sig-name descname"><span class="pre">isTraceOn</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.isTraceOn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.isTraceOn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print only if verbose activated and first parallel worker</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.launch">
+<span class="sig-name descname"><span class="pre">launch</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.launch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.launch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine procedures to prepare data and model, then
+launch the Kalman filter class on each pixel row by row</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.loadcheck_pastoutputs">
+<span class="sig-name descname"><span class="pre">loadcheck_pastoutputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tfct</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.loadcheck_pastoutputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.loadcheck_pastoutputs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Check input file consitency when restarting and frame time series update </dt><dd><ul class="simple">
+<li><p><em>data</em> : initiated data class (new interferograms)</p></li>
+<li><p><em>tfct</em> : initiated model class</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.readData">
+<span class="sig-name descname"><span class="pre">readData</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.readData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.readData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initiate the data class dealing with interferograms, time,
+spatial grid and mask. It</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>reads data</p></li>
+<li><p>divide the grid between workers (if MPI)</p></li>
+<li><p>build data covariance and</p></li>
+<li><p>store information</p></li>
+</ol>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kfts.RunKalmanFilter.setConfiguration">
+<span class="sig-name descname"><span class="pre">setConfiguration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kfts.html#RunKalmanFilter.setConfiguration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kfts.RunKalmanFilter.setConfiguration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read configuration file and convert to python objects.
+:config: open config file (.ini format)</p>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -142,18 +228,21 @@ Read configuration and data. Setup parameters. Run KF for each pixel.</p>
 <p>There are 3 output HDF5 files containing the following datasets. For N interferograms with (<em>Y</em>, <em>X</em>) pixels over <em>M</em> timesteps, we have
 * the time series of phase change with respect to the first acquisition in <code class="docutils literal notranslate"><span class="pre">Phases.h5</span></code></p>
 <blockquote>
-<div><p><code class="docutils literal notranslate"><span class="pre">`</span>
-<span class="pre">dates</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Ordinal</span> <span class="pre">values</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">SAR</span> <span class="pre">acquisition</span> <span class="pre">dates</span>
-<span class="pre">idx0</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{SCALAR}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Index</span> <span class="pre">of</span> <span class="pre">first</span> <span class="pre">phase</span> <span class="pre">in</span> <span class="pre">file</span> <span class="pre">with</span> <span class="pre">respect</span> <span class="pre">to</span> <span class="pre">first</span> <span class="pre">reference</span> <span class="pre">date</span> <span class="pre">of</span> <span class="pre">time</span> <span class="pre">series</span>
-<span class="pre">rawts</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{Y,</span> <span class="pre">X,</span> <span class="pre">M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Reconstructed</span> <span class="pre">phases</span>
-<span class="pre">rawts_std</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{Y,</span> <span class="pre">X,</span> <span class="pre">M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Reconstructed</span> <span class="pre">phases</span> <span class="pre">standard</span> <span class="pre">deviation</span> <span class="pre">(sqrt</span> <span class="pre">of</span> <span class="pre">diag(state_cov))</span>
-<span class="pre">tims</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Decimal</span> <span class="pre">years</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">SAR</span> <span class="pre">acquisition</span> <span class="pre">dates</span>
-<span class="pre">`</span></code></p>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<p>dates                    Dataset {M}              Ordinal values of the SAR acquisition dates
+idx0                     Dataset {SCALAR}         Index of first phase in file with respect to first reference date of time series
+rawts                    Dataset {Y, X, M}        Reconstructed phases
+rawts_std                Dataset {Y, X, M}        Reconstructed phases standard deviation (sqrt of diag(state_cov))
+tims                     Dataset {M}              Decimal years of the SAR acquisition dates</p>
 </div></blockquote>
 <ul>
 <li><p>the state information at the last time step <code class="docutils literal notranslate"><span class="pre">States.h5</span></code>. This contains the <em>L</em> optimized parameters, as well as the <em>m</em> last phase observations (indices M, M-1, M-2, …, M-m+1), usefull to restart KFTS for later updates and associated covariances.</p>
-<p><a href="#id1"><span class="problematic" id="id2">``</span></a>`
-indx                     Dataset {m}              Indexes (with respect to first acquisition) of the phases kept in the state
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<p>indx                     Dataset {m}              Indexes (with respect to first acquisition) of the phases kept in the state
 misclosure               Dataset {SCALAR}         Misclosure error included in data covariance (sig_i)
 mismodeling              Dataset {SCALAR}         Mismodeling error added as process noise on last phase estimate (sig_y)
 processnoise             Dataset {L}              Process noise for functional model parameters (default is ok)
@@ -162,10 +251,11 @@ state_cov                Dataset {Y, X, L+m, L+m} Covariances of state for each 
 tims                     Dataset {m}              Times corresponding to phases in state in decimal years with respect to first phase</p>
 </li>
 <li><p>metadata useful to evaluate the quality of the dataset, estimates and chosen parameters <code class="docutils literal notranslate"><span class="pre">Updates.h5</span></code>.</p>
-<p><code class="docutils literal notranslate"><span class="pre">`</span>
-<span class="pre">mean_innov</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{Y,</span> <span class="pre">X,</span> <span class="pre">M}</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Mean</span> <span class="pre">innovation</span> <span class="pre">(or</span> <span class="pre">residual)</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">last</span> <span class="pre">phase</span> <span class="pre">estimate</span> <span class="pre">at</span> <span class="pre">each</span> <span class="pre">time</span> <span class="pre">step</span>
-<span class="pre">param_gain</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">Dataset</span> <span class="pre">{Y,</span> <span class="pre">X,</span> <span class="pre">M,</span> <span class="pre">L}</span>&#160;&#160;&#160;&#160; <span class="pre">Norm</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">gain</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">L</span> <span class="pre">model</span> <span class="pre">parameters</span> <span class="pre">at</span> <span class="pre">each</span> <span class="pre">time</span> <span class="pre">step</span>
-<span class="pre">`</span></code></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<p>mean_innov               Dataset {Y, X, M}        Mean innovation (or residual) for the last phase estimate at each time step
+param_gain               Dataset {Y, X, M, L}     Norm of the gain for the L model parameters at each time step</p>
 </li>
 </ul>
 </section>
