@@ -32,9 +32,8 @@ Outputs
 --------
 
 There are 3 output HDF5 files containing the following datasets. For N interferograms with (*Y*, *X*) pixels over *M* timesteps, we have  
-* the time series of phase change with respect to the first acquisition in ``Phases.h5`` 
+* the time series of phase change with respect to the first acquisition in ``Phases.h5``::
 
-  .. code-block:: 
   dates                    Dataset {M}              Ordinal values of the SAR acquisition dates
   idx0                     Dataset {SCALAR}         Index of first phase in file with respect to first reference date of time series
   rawts                    Dataset {Y, X, M}        Reconstructed phases
@@ -42,9 +41,8 @@ There are 3 output HDF5 files containing the following datasets. For N interfero
   tims                     Dataset {M}              Decimal years of the SAR acquisition dates
   
 
-* the state information at the last time step ``States.h5``. This contains the *L* optimized parameters, as well as the *m* last phase observations (indices M, M-1, M-2, ..., M-m+1), usefull to restart KFTS for later updates and associated covariances. 
-  
-  .. code-block:: 
+* the state information at the last time step ``States.h5``. This contains the *L* optimized parameters, as well as the *m* last phase observations (indices M, M-1, M-2, ..., M-m+1), usefull to restart KFTS for later updates and associated covariances::
+
   indx                     Dataset {m}              Indexes (with respect to first acquisition) of the phases kept in the state
   misclosure               Dataset {SCALAR}         Misclosure error included in data covariance (sig_i)
   mismodeling              Dataset {SCALAR}         Mismodeling error added as process noise on last phase estimate (sig_y)
@@ -53,9 +51,8 @@ There are 3 output HDF5 files containing the following datasets. For N interfero
   state_cov                Dataset {Y, X, L+m, L+m} Covariances of state for each pixel
   tims                     Dataset {m}              Times corresponding to phases in state in decimal years with respect to first phase
 
-* metadata useful to evaluate the quality of the dataset, estimates and chosen parameters ``Updates.h5``. 
-  
-  .. code-block:: 
+* metadata useful to evaluate the quality of the dataset, estimates and chosen parameters ``Updates.h5``::
+
   mean_innov               Dataset {Y, X, M}        Mean innovation (or residual) for the last phase estimate at each time step
   param_gain               Dataset {Y, X, M, L}     Norm of the gain for the L model parameters at each time step
 

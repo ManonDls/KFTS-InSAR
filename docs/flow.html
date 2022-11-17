@@ -226,22 +226,16 @@ spatial grid and mask. It</p>
 <section id="outputs">
 <h2><span class="section-number">2.3. </span>Outputs<a class="headerlink" href="#outputs" title="Permalink to this headline">¶</a></h2>
 <p>There are 3 output HDF5 files containing the following datasets. For N interferograms with (<em>Y</em>, <em>X</em>) pixels over <em>M</em> timesteps, we have
-* the time series of phase change with respect to the first acquisition in <code class="docutils literal notranslate"><span class="pre">Phases.h5</span></code></p>
-<blockquote>
-<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+* the time series of phase change with respect to the first acquisition in <code class="docutils literal notranslate"><span class="pre">Phases.h5</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">dates</span>                    <span class="n">Dataset</span> <span class="p">{</span><span class="n">M</span><span class="p">}</span>              <span class="n">Ordinal</span> <span class="n">values</span> <span class="n">of</span> <span class="n">the</span> <span class="n">SAR</span> <span class="n">acquisition</span> <span class="n">dates</span>
+<span class="n">idx0</span>                     <span class="n">Dataset</span> <span class="p">{</span><span class="n">SCALAR</span><span class="p">}</span>         <span class="n">Index</span> <span class="n">of</span> <span class="n">first</span> <span class="n">phase</span> <span class="ow">in</span> <span class="n">file</span> <span class="k">with</span> <span class="n">respect</span> <span class="n">to</span> <span class="n">first</span> <span class="n">reference</span> <span class="n">date</span> <span class="n">of</span> <span class="n">time</span> <span class="n">series</span>
+<span class="n">rawts</span>                    <span class="n">Dataset</span> <span class="p">{</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">M</span><span class="p">}</span>        <span class="n">Reconstructed</span> <span class="n">phases</span>
+<span class="n">rawts_std</span>                <span class="n">Dataset</span> <span class="p">{</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">M</span><span class="p">}</span>        <span class="n">Reconstructed</span> <span class="n">phases</span> <span class="n">standard</span> <span class="n">deviation</span> <span class="p">(</span><span class="n">sqrt</span> <span class="n">of</span> <span class="n">diag</span><span class="p">(</span><span class="n">state_cov</span><span class="p">))</span>
+<span class="n">tims</span>                     <span class="n">Dataset</span> <span class="p">{</span><span class="n">M</span><span class="p">}</span>              <span class="n">Decimal</span> <span class="n">years</span> <span class="n">of</span> <span class="n">the</span> <span class="n">SAR</span> <span class="n">acquisition</span> <span class="n">dates</span>
 </pre></div>
 </div>
-<p>dates                    Dataset {M}              Ordinal values of the SAR acquisition dates
-idx0                     Dataset {SCALAR}         Index of first phase in file with respect to first reference date of time series
-rawts                    Dataset {Y, X, M}        Reconstructed phases
-rawts_std                Dataset {Y, X, M}        Reconstructed phases standard deviation (sqrt of diag(state_cov))
-tims                     Dataset {M}              Decimal years of the SAR acquisition dates</p>
-</div></blockquote>
 <ul>
-<li><p>the state information at the last time step <code class="docutils literal notranslate"><span class="pre">States.h5</span></code>. This contains the <em>L</em> optimized parameters, as well as the <em>m</em> last phase observations (indices M, M-1, M-2, …, M-m+1), usefull to restart KFTS for later updates and associated covariances.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
-</pre></div>
-</div>
+<li><p>the state information at the last time step <code class="docutils literal notranslate"><span class="pre">States.h5</span></code>. This contains the <em>L</em> optimized parameters, as well as the <em>m</em> last phase observations (indices M, M-1, M-2, …, M-m+1), usefull to restart KFTS for later updates and associated covariances:</p>
 <p>indx                     Dataset {m}              Indexes (with respect to first acquisition) of the phases kept in the state
 misclosure               Dataset {SCALAR}         Misclosure error included in data covariance (sig_i)
 mismodeling              Dataset {SCALAR}         Mismodeling error added as process noise on last phase estimate (sig_y)
@@ -250,10 +244,7 @@ state                    Dataset {Y, X, L+m}      State vectors for each pixel
 state_cov                Dataset {Y, X, L+m, L+m} Covariances of state for each pixel
 tims                     Dataset {m}              Times corresponding to phases in state in decimal years with respect to first phase</p>
 </li>
-<li><p>metadata useful to evaluate the quality of the dataset, estimates and chosen parameters <code class="docutils literal notranslate"><span class="pre">Updates.h5</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
-</pre></div>
-</div>
+<li><p>metadata useful to evaluate the quality of the dataset, estimates and chosen parameters <code class="docutils literal notranslate"><span class="pre">Updates.h5</span></code>:</p>
 <p>mean_innov               Dataset {Y, X, M}        Mean innovation (or residual) for the last phase estimate at each time step
 param_gain               Dataset {Y, X, M, L}     Norm of the gain for the L model parameters at each time step</p>
 </li>

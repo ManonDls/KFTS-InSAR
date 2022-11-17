@@ -39,17 +39,14 @@
 <h2><span class="section-number">5.1. </span>Prepare inputs<a class="headerlink" href="#prepare-inputs" title="Permalink to this headline">¶</a></h2>
 <section id="format">
 <h3><span class="section-number">5.1.1. </span>Format<a class="headerlink" href="#format" title="Permalink to this headline">¶</a></h3>
-<p>KFTS-InSAR reads an HDF5 file containing the interferogram stack. It can contain the following dataset, although other format are suported, for <em>N</em> interferograms of (<em>Y</em>, <em>X</em>) pixels linking <em>M</em> acquisitions</p>
-<blockquote>
-<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+<p>KFTS-InSAR reads an HDF5 file containing the interferogram stack. It can contain the following dataset, although other format are suported, for <em>N</em> interferograms of (<em>Y</em>, <em>X</em>) pixels linking <em>M</em> acquisitions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Jmat</span>            <span class="n">Dataset</span> <span class="p">{</span><span class="n">N</span><span class="p">,</span> <span class="n">M</span><span class="p">}</span>     <span class="n">Connectivity</span> <span class="n">matrix</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">bperp</span>           <span class="n">Dataset</span> <span class="p">{</span><span class="n">N</span><span class="p">}</span>        <span class="n">Perpendicular</span> <span class="n">baseline</span> <span class="n">array</span> <span class="p">(</span><span class="ow">not</span> <span class="n">used</span> <span class="n">by</span> <span class="n">KFTS</span> <span class="n">yet</span><span class="p">)</span>
+<span class="n">dates</span>           <span class="n">Dataset</span> <span class="p">{</span><span class="n">M</span><span class="p">}</span>        <span class="n">Array</span> <span class="n">of</span> <span class="n">ordinal</span> <span class="n">values</span> <span class="k">for</span> <span class="n">SAR</span> <span class="n">acquisition</span> <span class="n">dates</span>
+<span class="n">figram</span>          <span class="n">Dataset</span> <span class="p">{</span><span class="n">N</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">}</span>  <span class="n">Array</span> <span class="n">of</span> <span class="n">interferograms</span>
+<span class="n">tims</span>            <span class="n">Dataset</span> <span class="p">{</span><span class="n">M</span><span class="p">}</span>        <span class="n">Array</span> <span class="n">of</span> <span class="n">SAR</span> <span class="n">acquisition</span> <span class="n">times</span> <span class="ow">in</span> <span class="n">decimal</span> <span class="n">years</span>
 </pre></div>
 </div>
-<p>Jmat            Dataset {N, M}     Connectivity matrix [-1,1,0]
-bperp           Dataset {N}        Perpendicular baseline array (not used by KFTS yet)
-dates           Dataset {M}        Array of ordinal values for SAR acquisition dates
-figram          Dataset {N, Y, X}  Array of interferograms
-tims            Dataset {M}        Array of SAR acquisition times in decimal years</p>
-</div></blockquote>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>KFTS is able to read <code class="docutils literal notranslate"><span class="pre">MintPy</span></code> ifgramStack file without the use of the <cite>prepare_input.py</cite> routine</p>
