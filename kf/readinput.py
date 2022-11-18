@@ -159,8 +159,6 @@ class SetupKF(object):
                 maxy = miny + Yslice
             else:
                 maxy = self.Ntot
-            if residual > 1
-            for i in range(N, 0, -1):
 
             self.Ny = maxy -miny
             self.miny,self.maxy = miny,maxy
