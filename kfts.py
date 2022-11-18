@@ -106,6 +106,10 @@ class RunKalmanFilter(object):
         self.UPDT    = secKFS.getboolean('UPDT', fallback = False)
         self.pxlTh   = secKFS.getint('pxlTh', fallback = 1)
         self.cohTh   = secKFS.getfloat('cohTh', fallback = None)
+        self.ref     = (secKFS.getint('refy',fallback = None),
+                                secKFS.getint('refx',fallback = None))
+        if None in self.ref :
+            self.ref = None
 
         if self.isTraceOn():
             print("Functional model string is: {}".format(self.model))
@@ -141,9 +145,9 @@ class RunKalmanFilter(object):
             comm = self.comm, 
             mpiarg = (self.rank,self.size), 
             fmt = self.fmtfile, 
-            verbose = self.VERBOSE,
+            verbose = self.isTraceOn(),
             subregion = self.subregion,
-            cohTh = self.cohTh )
+            cohTh = self.cohTh, refyx = self.ref )
 
         # Chose subset around fault 
         #data.select_pxl_band(x,y,0.48,-750,-650) 
@@ -295,8 +299,10 @@ class RunKalmanFilter(object):
             Leq,P0eq = self.earthquakeIntegration(data)
         
         # Start class dealing with the functional model
-        tfct = TimeFct(data.time,self.model,verbose=self.isTraceOn())
-        tfct.check_model(verbose = self.VERBOSE)
+        if self.isTraceOn():
+            print("-- Read and initialize model --")
+        tfct = TimeFct(data.time,self.model)
+        tfct.check_model(verbose = self.isTraceOn())
         L = len(self.sig_a)
         
         # Check right number of model a priori error
@@ -388,7 +394,9 @@ class RunKalmanFilter(object):
         fupdate.close()
         if self.UPDT == True:
             finstate.close()
-        
+        if self.cohTh is not None:
+            data.finmask.close() 
+
         print('Time for Kalman filter : {}'.format(TIME.time() - kf_start))
 
 

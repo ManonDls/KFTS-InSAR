@@ -29,10 +29,11 @@ class Subregion():
 
 class SetupKF(object):
 
-    def __init__(self, h5file, fmt='ISCE', comm=False, mpiarg=0, verbose=True, subregion=None, cohTh=None):
+    def __init__(self, h5file, fmt='ISCE', comm=False, mpiarg=0, utime = 'years',
+                        verbose=True, subregion=None, cohTh=None, refyx=None):
         '''
         Class for reading and modifying interferograms for Kalman filtering.
-            :h5file: .h5 file path containing
+            :h5file:    .h5 file path containing
                 
                 - time  : decimal dates relative to first acquisition (usually in years)
                 - dates : absolute data
@@ -40,10 +41,15 @@ class SetupKF(object):
                 - links : connection between phases to build interfero (M x N), 0 1 and -1
                 - bperp : perpendicular baseline between aquisitions (not exploited yet)
         Opts:
-            :fmt:    format of H5file input, default is 'ISCE' (also 'RAW' 'MintPy')
-            :mpi:    do you use parallel features of mpi4py (True or False, default False)
-            :mpiarg: precise rank and size of communicator (tuple used if mpi=True)
+            :fmt:       format of H5file input, default is 'ISCE' (also 'RAW' 'MintPy')
+            :comm:      do you use parallel features of mpi4py (True or False, default False)
+            :mpiarg:    precise rank and size of communicator (tuple used if mpi=True)
+            :utime:     time unit as string (years or days)
+            :verbose:   print stuff? (True or False)
+            :subregion: subregion class instance containing x and y bounds as pixel numbers
+            :cohTh:     minimum coherence used to mask pixels in each interferogram
         '''
+
         if comm == False:
             mpi=False
         else :
@@ -77,9 +83,15 @@ class SetupKF(object):
             self.spatial_grid(xmin = subregion.x1, xmax = subregion.x2, 
                         ymin = subregion.y1, ymax = subregion.y2, truncate = True)
         
+        #Slice data between workers along Y (axis 1)
         self.dividepxls(mpi,mpiarg)
         
-        
+        if (refyx is not None) or (cohTh is not None):
+           #modification of input igram is required 
+           self.copydata2file(fin)
+           if refyx is not None:
+               self.rereference(refyx)
+
         if  fmt.upper() == 'MINTPY':
             self.bperp       = fin['bperp'][:] 
             self.mintpy2kfts(fin)
@@ -90,22 +102,33 @@ class SetupKF(object):
             self.orddates    = fin['dates'][:].astype(int)          #ordinal dates
         
         if subregion is None: 
-            self.igram   = fin[intrfname][:,self.miny:self.maxy,:]     #3D (interf,y,x)
+            self.igram   = self.igram[:,self.miny:self.maxy,:]     #3D (interf,y,x)
         else :
-            self.igram   = fin[intrfname][:,subregion.y1:subregion.y2,
+            self.igram   = self.igram[:,subregion.y1:subregion.y2,
                                             subregion.x1:subregion.x2]
         # Apply coherence threshold
         if cohTh is not None:
             self.filter_by_coherence(fin,cohTh)
-
+        
         # Ordinal date to decimal year
         init      = dt.datetime.fromordinal(self.orddates[0])
         yr_start  = dt.date(init.year,1,1).toordinal()
         yr_len    = dt.date(init.year+1,1,1).toordinal() - yr_start
         day_inyr  = dt.date(init.year,init.month,init.day).toordinal() - yr_start
         t0        = init.year + day_inyr/yr_len 
-
         self.date =  t0 + self.time[:]
+
+        if utime == 'years':
+            if self.verbose: 
+                print('Time expressed in years')  
+        elif utime == 'days':
+            # Ordinal dates in days already
+            if self.verbose :
+                print('WARNING: time is in number of days')
+            self.time   = self.orddates - self.orddates[0]
+        else : 
+            assert False, "unit of time {} not understood".format(utime)
+        self.unit = utime 
 
 
     def dividepxls(self, mpi, mpiarg):
@@ -125,22 +148,24 @@ class SetupKF(object):
             else :
                 Yslice = 1
 
-            if self.verbose and self.rank==0:
-                print('There are {} columns, each worker will deal with {} columns'.format(
+            if self.verbose:
+                print('There are {} columns, each worker will deal with about {} columns'.format(
                                                       self.Ntot,Yslice))
             #select subset along latitudes (y)
             miny = self.rank * Yslice
             assert (miny < self.Ntot),"Worker {} has no columns to work with, STOP".format(self.rank)
-
+            
             if self.rank < (size-1):
                 maxy = miny + Yslice
             else:
                 maxy = self.Ntot
+            if residual > 1
+            for i in range(N, 0, -1):
 
             self.Ny = maxy -miny
             self.miny,self.maxy = miny,maxy
             
-            if self.verbose:
+            if self.rank in [0,size]: 
                 print('Worker {} working on {} to {}'.format(self.rank, miny, maxy))
             
         else :
@@ -216,27 +241,60 @@ class SetupKF(object):
         self.orddates = stack.days.astype(int)  # ordinal dates 
         self.time = (stack.days-stack.days[0])/365.25    # decimal years 
     
-
+    def copydata2file(self,fin):
+        '''
+        Create new file to copy and edit data (interferograms) 
+        in a safe and memory-saving way before splitting tasks between workers
+        '''
+        # create new file for iterative writing and storage
+        newstackfile = fin.filename[:-3]+'_copy_igram.h5'
+        if not self.mpi :
+            fout = h5py.File(newstackfile,'w')
+        else : 
+            fout = h5py.File(newstackfile,'w', driver='mpio', comm=self.comm)
+            
+        if self.verbose:
+            print('Create standardized source file {}'.format(newstackfile))  
+        
+        #dataset
+        maskigram = fout.create_dataset('igrams',(self.igram.shape),'f')
+        maskigram[:,self.miny:self.maxy,:] = self.igram[:,self.miny:self.maxy,:]
+        self.finmask = fout
+    
+    def rereference(self,ref):
+        '''
+        Remove the interferoùetric value on a given pixel to all interferograms
+        (optional if interferogram stack already referenced)
+            :ref: (y,x) pixel index of reference
+        '''
+        if self.verbose:
+            print('-- Re-reference all interferograms to a single pixel {} --'.format(ref))
+        
+        if hasattr(self, 'finmask'): 
+            maskigram = self.finmask['igrams']
+        else:
+           assert False, "Need to run copydata2file BEFORE filter_by_coherence"
+        
+        for j in range(self.igram.shape[0]): 
+           maskigram[j,:,:] -= maskigram[j,ref[0],ref[1]]
+        
+        self.igram = maskigram
+        
     def filter_by_coherence(self,fin,cohTh):
         '''
-        Open all interferograms and copy them and remove points below a given threshold
+        Remove points below a given threshold in all interferograms
             :fin: open HDF5 file containing a 'coherence' dataset
         '''
-
-        # create new file for iterative writing and storage
-        newstackfile = fin.filename[:-3]+'_copy_maskedigram.h5'
         
-        if not self.mpi :
-            fout = h5py.File(newstackfile,'a')
-        else : 
-            fout = h5py.File(newstackfile,'a', driver='mpio', comm=self.comm)
-            
-        if self.rank==0 and self.verbose:
+        if self.verbose:
             print('-- Masking low coherence pixel in each interferogram --')
             print('Coherence threshold is {}'.format(cohTh))
-            print('Create standardized source file {}'.format(newstackfile))  
-            
-        maskigram = fout.create_dataset('rawts_std',(self.igram.shape[0],self.Ntot,self.Nx),'f')
+        
+        if hasattr(self, 'finmask'): 
+            maskigram = self.finmask['igrams']
+        else:
+           assert False, "Need to run copydata2file BEFORE filter_by_coherence"
+
         for j in range(0, self.Ny): #each worker iterates over its own Y
             # load coherence
             cohsub = fin['coherence'][:,self.miny+j,:]
@@ -256,7 +314,7 @@ class SetupKF(object):
         * maskfile:  hdf5 file containing a 'mask' dataset of (Y,X) shape
         '''
         
-        if self.rank==0 and self.verbose:
+        if self.verbose:
             print('-- Masking pixels according to a loaded mask --')
             print('Input mask is in {}'.format(maskfile))
 
@@ -289,10 +347,10 @@ class SetupKF(object):
         '''
         
         # Make mask
-        if self.rank==0 and self.verbose:
+        if self.verbose:
             print('-- Masking elements with little data --')
         
-        mask = np.zeros(self.igram.shape[1:]) #(interf,y,x)
+        mask = np.zeros(self.igram.shape[1:]) #(dy,x)
         
         for j in range(0, self.Nx, chunks):    #itterate through blocks of 
             end = np.min([self.igram.shape[2], j+chunks])
@@ -314,9 +372,8 @@ class SetupKF(object):
         else:
             self.mask = mask
         
-        if self.verbose :
-            print('Selected pixels :',int(np.sum(mask)),'so',\
-                        round(np.sum(mask)/(float(self.Nx*self.Ny))*100.,1),'%',
+        print('Selected pixels :',int(np.sum(self.mask)),'so',\
+                        round(np.sum(self.mask)/(float(self.Nx*self.Ny))*100.,1),'%',
                         "-for worker",self.rank)
                                 
         return 
@@ -333,7 +390,7 @@ class SetupKF(object):
         NOT ADAPTED FOR MPI USE YET
         '''
         
-        if self.rank==0 and self.verbose:
+        if self.verbose:
             print('-- Selecting fault zone --')
         
         mask = np.zeros(self.igram.shape[1:])
@@ -350,7 +407,7 @@ class SetupKF(object):
         else:
             self.mask = mask
         
-        if self.verbose and self.rank == 0:
+        if self.verbose:
             print(self.rank,'Selected pixels :',int(np.sum(mask)),'so',\
                             round(np.sum(mask)/(float(self.Nx*self.Ny))*100.,2),'%')
 
@@ -370,7 +427,7 @@ class SetupKF(object):
         
         self.max_tsep = int(max(((self.imoins-self.iplus)**2)**(1/2.)))
         
-        if self.rank==0 and self.verbose:
+        if self.verbose:
             print('max step separation btwn interfero',self.max_tsep)
         
         return 
@@ -395,9 +452,14 @@ class SetupKF(object):
         return  
 
     def summary(self):
-        ''' Print data properties'''
+        '''Print data properties '''
 
-        if self.rank==0 and self.verbose:
+        if self.verbose:
+            init = dt.datetime.fromordinal(self.orddates[0])
+            last = dt.datetime.fromordinal(self.orddates[-1])
+            print("-- Data summary --")
+            print('starting date is {}/{}/{} and last acquisition {}/{}/{}'.format(
+                        init.year, init.month, init.day, last.year, last.month, last.day))
             print('timespan of measurements : ',self.time[-1] - self.time[0],'years')
             print('number of days with acquisitions : ', len(self.time))
             print('number of interferograms : ', len(self.bperp))
