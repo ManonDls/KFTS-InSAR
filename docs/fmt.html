@@ -202,7 +202,7 @@ It can be used for GIAnT time series analysis.</p>
 <p>Processing steps contained in the main KFTS-InSAR routine.</p>
 <span class="target" id="module-kf.readinput"></span><dl class="py class">
 <dt class="sig sig-object py" id="kf.readinput.SetupKF">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">SetupKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ISCE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpiarg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subregion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cohTh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.readinput.</span></span><span class="sig-name descname"><span class="pre">SetupKF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ISCE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpiarg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">utime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'years'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subregion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cohTh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refyx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
 <dt>Class for reading and modifying interferograms for Kalman filtering.</dt><dd><dl class="field-list simple">
 <dt class="field-odd">h5file<span class="colon">:</span></dt>
@@ -221,11 +221,23 @@ It can be used for GIAnT time series analysis.</p>
 <dt class="field-odd">fmt<span class="colon">:</span></dt>
 <dd class="field-odd"><p>format of H5file input, default is ‘ISCE’ (also ‘RAW’ ‘MintPy’)</p>
 </dd>
-<dt class="field-even">mpi<span class="colon">:</span></dt>
+<dt class="field-even">comm<span class="colon">:</span></dt>
 <dd class="field-even"><p>do you use parallel features of mpi4py (True or False, default False)</p>
 </dd>
 <dt class="field-odd">mpiarg<span class="colon">:</span></dt>
 <dd class="field-odd"><p>precise rank and size of communicator (tuple used if mpi=True)</p>
+</dd>
+<dt class="field-even">utime<span class="colon">:</span></dt>
+<dd class="field-even"><p>time unit as string (years or days)</p>
+</dd>
+<dt class="field-odd">verbose<span class="colon">:</span></dt>
+<dd class="field-odd"><p>print stuff? (True or False)</p>
+</dd>
+<dt class="field-even">subregion<span class="colon">:</span></dt>
+<dd class="field-even"><p>subregion class instance containing x and y bounds as pixel numbers</p>
+</dd>
+<dt class="field-odd">cohTh<span class="colon">:</span></dt>
+<dd class="field-odd"><p>minimum coherence used to mask pixels in each interferogram</p>
 </dd>
 </dl>
 </dd>
@@ -236,6 +248,13 @@ It can be used for GIAnT time series analysis.</p>
 <dd><ul class="simple">
 <li><p>maskfile:  hdf5 file containing a ‘mask’ dataset of (Y,X) shape</p></li>
 </ul>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.copydata2file">
+<span class="sig-name descname"><span class="pre">copydata2file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fin</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.copydata2file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.copydata2file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create new file to copy and edit data (interferograms) 
+in a safe and memory-saving way before splitting tasks between workers</p>
 </dd></dl>
 
 <dl class="py method">
@@ -261,7 +280,7 @@ It can be used for GIAnT time series analysis.</p>
 <dt class="sig sig-object py" id="kf.readinput.SetupKF.filter_by_coherence">
 <span class="sig-name descname"><span class="pre">filter_by_coherence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cohTh</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.filter_by_coherence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.filter_by_coherence" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="simple">
-<dt>Open all interferograms and copy them and remove points below a given threshold</dt><dd><dl class="field-list simple">
+<dt>Remove points below a given threshold in all interferograms</dt><dd><dl class="field-list simple">
 <dt class="field-odd">fin<span class="colon">:</span></dt>
 <dd class="field-odd"><p>open HDF5 file containing a ‘coherence’ dataset</p>
 </dd>
@@ -320,6 +339,20 @@ Essentially reformat dates and build matrix mapping interferogram to time</p>
 </ul>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kf.readinput.SetupKF.rereference">
+<span class="sig-name descname"><span class="pre">rereference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/readinput.html#SetupKF.rereference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.readinput.SetupKF.rereference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove the interferoùetric value on a given pixel to all interferograms
+(optional if interferogram stack already referenced)</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">ref<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(y,x) pixel index of reference</p>
+</dd>
+</dl>
+</div></blockquote>
 </dd></dl>
 
 <dl class="py method">

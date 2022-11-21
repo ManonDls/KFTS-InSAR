@@ -212,7 +212,7 @@ if VOLC :
 
 #Initiate model class
 mod = TimeFct(dates,model)
-mod.check_model(verbose=False)
+mod.check_model()
 parm_names = mod.get_label(L,'mm')
 
 #--------------------------------------------------------------------
@@ -298,10 +298,15 @@ for indx in pixels:
     
     curve = mod.draw_model(params[i,j,:])
     ax0[k].errorbar(dates,phases[i,j,:],yerr=ph_std[i,j,:],
-                        fmt='.',color='C0',markersize=4,label='phases')
-    ax0[k].plot(dates,curve,'-',c='C0',linewidth=0.8,label='model')
-    
+                        fmt='.',lw=0.8,color='C0',markersize=4,label='phases')
+    ax0[k].plot(dates,curve,'-',c='red',linewidth=0.8,label='model',zorder=4)
+    ax0[k].set_xlim(min(dates),max(dates)+0.05)
     ax0[k].set_xlabel('time (years)')
+    if 'LISEG' in mod.model[0]:
+        ylim = ax0[k].get_ylim()
+        for i in range(1,len(mod.model[0])):
+            ax0[k].plot([mod.model[0][i],mod.model[0][i]],ylim,'k--',lw=1)
+        ax0[k].set_ylim(ylim)
     k +=1
 
 ax0[0].legend(loc='best',fontsize=9)

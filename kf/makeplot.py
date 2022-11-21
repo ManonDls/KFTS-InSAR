@@ -157,7 +157,7 @@ def plot_TS(figname, time, rawts, err, pixel=None, model=[], params=[], label=[]
         from kf.timefunction import TimeFct
         print("initiate timefunction")
         mod = TimeFct(time,model)
-        mod.check_model(verbose=False)
+        mod.check_model()
         if time[0] >0:
             params = mod.shift_t0(time[0],params)
             

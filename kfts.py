@@ -301,8 +301,8 @@ class RunKalmanFilter(object):
         # Start class dealing with the functional model
         if self.isTraceOn():
             print("-- Read and initialize model --")
-        tfct = TimeFct(data.time,self.model)
-        tfct.check_model(verbose = self.isTraceOn())
+        tfct = TimeFct(data.time,self.model,verbose = self.isTraceOn())
+        tfct.check_model()
         L = len(self.sig_a)
         
         # Check right number of model a priori error

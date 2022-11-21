@@ -139,6 +139,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">UPDT</span>    <span class="o">=</span> <span class="n">secKFS</span><span class="o">.</span><span class="n">getboolean</span><span class="p">(</span><span class="s1">&#39;UPDT&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pxlTh</span>   <span class="o">=</span> <span class="n">secKFS</span><span class="o">.</span><span class="n">getint</span><span class="p">(</span><span class="s1">&#39;pxlTh&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cohTh</span>   <span class="o">=</span> <span class="n">secKFS</span><span class="o">.</span><span class="n">getfloat</span><span class="p">(</span><span class="s1">&#39;cohTh&#39;</span><span class="p">,</span> <span class="n">fallback</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ref</span>     <span class="o">=</span> <span class="p">(</span><span class="n">secKFS</span><span class="o">.</span><span class="n">getint</span><span class="p">(</span><span class="s1">&#39;refy&#39;</span><span class="p">,</span><span class="n">fallback</span> <span class="o">=</span> <span class="kc">None</span><span class="p">),</span>
+                                <span class="n">secKFS</span><span class="o">.</span><span class="n">getint</span><span class="p">(</span><span class="s1">&#39;refx&#39;</span><span class="p">,</span><span class="n">fallback</span> <span class="o">=</span> <span class="kc">None</span><span class="p">))</span>
+        <span class="k">if</span> <span class="kc">None</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ref</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">():</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Functional model string is: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">))</span>
@@ -174,9 +178,9 @@
             <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">,</span> 
             <span class="n">mpiarg</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> 
             <span class="n">fmt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fmtfile</span><span class="p">,</span> 
-            <span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span><span class="p">,</span>
+            <span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">(),</span>
             <span class="n">subregion</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subregion</span><span class="p">,</span>
-            <span class="n">cohTh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cohTh</span> <span class="p">)</span>
+            <span class="n">cohTh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cohTh</span><span class="p">,</span> <span class="n">refyx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span> <span class="p">)</span>
 
         <span class="c1"># Chose subset around fault </span>
         <span class="c1">#data.select_pxl_band(x,y,0.48,-750,-650) </span>
@@ -328,8 +332,10 @@
             <span class="n">Leq</span><span class="p">,</span><span class="n">P0eq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">earthquakeIntegration</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         
         <span class="c1"># Start class dealing with the functional model</span>
-        <span class="n">tfct</span> <span class="o">=</span> <span class="n">TimeFct</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
-        <span class="n">tfct</span><span class="o">.</span><span class="n">check_model</span><span class="p">(</span><span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VERBOSE</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-- Read and initialize model --&quot;</span><span class="p">)</span>
+        <span class="n">tfct</span> <span class="o">=</span> <span class="n">TimeFct</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span><span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">isTraceOn</span><span class="p">())</span>
+        <span class="n">tfct</span><span class="o">.</span><span class="n">check_model</span><span class="p">()</span>
         <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sig_a</span><span class="p">)</span>
         
         <span class="c1"># Check right number of model a priori error</span>
@@ -421,7 +427,9 @@
         <span class="n">fupdate</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">UPDT</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
             <span class="n">finstate</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cohTh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">finmask</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> 
+
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Time for Kalman filter : </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">kf_start</span><span class="p">))</span></div></div>
 
 

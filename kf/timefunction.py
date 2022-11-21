@@ -42,8 +42,9 @@ class TimeFct(object):
           ``('HTAN'   ,t1,w1,t2,w2,...),``             slowslip(s) centred on ``ti``
           ``('EXP'    ,t1,w1),``                       starting and characteristic time
           ``('LOG'    ,t1,w1),``                       starting and characteristic time
-          ``('BSPLINE',order,t1,w1,t2,w2,...)``        peak(s) of deformation centred on ``ti``
-          ``('ISPLINE',order,t1,w1,t2,w2,...)]``       slowslip(s) centred on ``ti``         
+          ``('BSPLINE',order,t1,w1,t2,w2,...),``       peak(s) of deformation centred on ``ti``
+          ``('ISPLINE',order,t1,w1,t2,w2,...),``       slowslip(s) centred on ``ti``      
+          ``('LISEG'  ,t1,t2,...)]``                   line segment(s) beween ``ti`` and ``t(i+1)``
         ========================================    ========================
         
         '''
@@ -122,6 +123,13 @@ class TimeFct(object):
                 if self.verbose:
                     print('+ Integrated Spline of degree',mod[1],'centred on times', mod[2::2],'and with width',mod[3::2])
                 k += len(mod[2::2])
+            
+            elif mod[0] == 'LISEG':
+                assert len(mod)>=3, "Syntax: ['LISEG',start_time,stop1,stop2,...]"
+                if self.verbose:
+                    print('+ Linear segment(s) between times',mod[1:],'and end of time series')
+                k += len(mod[1:])+1 #cste + one slope by time span 
+
             
             else:
                 assert False, 'Functional form unknown: {}'.format(mod)
@@ -213,7 +221,23 @@ class TimeFct(object):
                     
                 A[k:k+nb_is] = spline
                 k += nb_is
+            
+            elif mod[0] == 'LISEG':
+                A[k] = 1. #cste a0
+                k += 1
                 
+                #slopes depending on time 
+                for i in range(1,len(mod)):
+                    maskt = (t > mod[i])
+                    if i < len(mod)-1: #else until end of timeseries
+                        #set maximum date 
+                        maskt *= (t < mod[i+1])
+                        #for continuity with next segment
+                        A[k,(t > mod[i+1])] = mod[i+1] #a1*t1
+                        
+                    A[k,maskt] = t[maskt] - mod[i] #a1*(t-t1) for t>t0 & t<t1
+                    k += 1
+                    
             else:
                 assert False, 'Functional form unknown: {}'.format(mod)
         
@@ -252,7 +276,8 @@ class TimeFct(object):
                         in the same order as in model \
                         (correspond to first elements of state vector m)'''     
         
-        assert np.shape(coeff)[-1]==self.L, "number of parameters do no match functional model"
+        assert np.shape(coeff)[-1]==self.L,"number of parameters {} do no match functional\
+        model ({} expected)".format(np.shape(coeff)[-1],self.L)
 
         A = self.transition_vect(self.t)
         
@@ -353,7 +378,11 @@ class TimeFct(object):
                 for i in range(nb_ss):
                     mod[1+i*2] += t0
                 k += nb_ss
-                
+            
+            elif mod[0] == 'LISEG':
+                for i in range(len(mod[1:])):
+                    mod[i] += t0
+                    
             else:
                 assert False, 'Functional form unknown: {}'.format(mod)
             j += 1
@@ -425,6 +454,14 @@ class TimeFct(object):
                         if k==N:
                             break 
                 
+                elif mod[0] == 'LISEG':
+                    k += 1  #cste 
+                    for i in range(len(mod[1:])):
+                        if k==N:
+                            break
+                        kk = i+1
+                        k += 1 
+                        
                 else:
                     assert False, 'Functional form unknown: {}'.format(mod)
                 
@@ -458,7 +495,7 @@ class TimeFct(object):
                     kk += 1
                     continue
             
-            if ref[0] in ('STEP','EARTHQUAKE','HEAVISIDE'):
+            if ref[0] in ('STEP','EARTHQUAKE','HEAVISIDE','LISEG'):
                 times = [i for i in ref[1:] if i <= (t+dt)]
                 indx = len(times)
                 if indx > 0 :
@@ -537,7 +574,14 @@ class TimeFct(object):
                        print("    Consider it has already converged to a reliable value because {} > starting time ({})".format(dtmax,self.t[0]))
                        Cstindex = k
                        k += mod[1]+1
-                
+                       
+                elif mod[0] == 'LISEG':
+                    for i in range(2, len(mod)) : 
+                        if self.t[0] > mod[i] + dtmax :
+                            print("Stop optimization of the linear segment from {}-{}".format(mod[i-1],mod[i]))
+                            print("ERROR: code not optimized for this, nothing done")
+                    k += len(mod[1:])+1
+                            
                 elif mod[0] in ('STEP','EARTHQUAKE','HEAVISIDE'):
                     kkk = [] #local count
                     for i in range(1, len(mod)) : 
@@ -619,6 +663,9 @@ class TimeFct(object):
         for mod in self.mod : 
             if mod[0] in ('POLY','POLYNOMIAL'):
                 k += mod[1]+1
+            
+            if mod[0] == 'LISEG':
+                k += len(mod[:1])+1
                     
             elif mod[0] in ('COS','COSINE'):
                 freqs.append(mod[1])
@@ -681,12 +728,13 @@ class TimeFct(object):
         return m_out, P_out
         
         
-    def get_label(self, L, unit, phase=False):
+    def get_label(self, L, unit, tunit='day', phase=False):
         ''' 
         Get an array of labels for each model parameters (name and units) 
         which can be used for plotting
             * *L*     : number of parameters
             * *unit*  : string of length unit
+            * *tunit* : string of time unit
             * *phase* : True if sine and cosine amplitudes converted into \
                         sine amplitude and phase shift '''
          
@@ -704,6 +752,15 @@ class TimeFct(object):
                     for i in range(2,mod[1]+1):
                         label[k] = 'Polynomial coef.\n $(mm/day^%d)$'%i
                         k += 1
+            elif mod[0] == 'LISEG':
+                label[k] =  'Offset\n (%s)'%unit  
+                k +=1
+                for i in range(1,len(mod)):
+                    if i < len(mod)-1:
+                        label[k] = "Velocity from {}\n to {} $({}/day)$".format(mod[i],mod[i+1],unit)
+                    else : 
+                        label[k] = "Velocity from {}\n to {} $({}/day)$".format(mod[i],self.t[-1],unit)
+                    k += 1
                     
             elif mod[0] in ('COS','COSINE'):
                 if phase== True:

@@ -82,7 +82,9 @@ class SetupKF(object):
         else :
             self.spatial_grid(xmin = subregion.x1, xmax = subregion.x2, 
                         ymin = subregion.y1, ymax = subregion.y2, truncate = True)
-        
+            self.igram = self.igram[:,subregion.y1:subregion.y2,
+                                          subregion.x1:subregion.x2]
+
         #Slice data between workers along Y (axis 1)
         self.dividepxls(mpi,mpiarg)
         
@@ -101,11 +103,8 @@ class SetupKF(object):
             self.bperp       = fin['bperp'][:]                      #perpendicular baseline (interf)
             self.orddates    = fin['dates'][:].astype(int)          #ordinal dates
         
-        if subregion is None: 
-            self.igram   = self.igram[:,self.miny:self.maxy,:]     #3D (interf,y,x)
-        else :
-            self.igram   = self.igram[:,subregion.y1:subregion.y2,
-                                            subregion.x1:subregion.x2]
+        self.igram   = self.igram[:,self.miny:self.maxy,:]     #3D (interf,y,x)
+
         # Apply coherence threshold
         if cohTh is not None:
             self.filter_by_coherence(fin,cohTh)
@@ -144,10 +143,11 @@ class SetupKF(object):
             
             #select number of line per worker
             if self.Ntot > size :
-                Yslice = int(self.Ny/size)
+                Yslice = self.Ny//size
+                residual = self.Ny %size
             else :
                 Yslice = 1
-
+                residual = 0
             if self.verbose:
                 print('There are {} columns, each worker will deal with about {} columns'.format(
                                                       self.Ntot,Yslice))
@@ -159,12 +159,19 @@ class SetupKF(object):
                 maxy = miny + Yslice
             else:
                 maxy = self.Ntot
-
+            
+            #Redistribute residual of division 
+            if residual >0.:
+                ranktoend = size - self.rank #size to 1
+                if (ranktoend <= residual) & (self.rank <(size-1)):
+                    maxy += residual+1 -ranktoend
+                if (ranktoend < residual):
+                    miny += residual -ranktoend
+                
             self.Ny = maxy -miny
             self.miny,self.maxy = miny,maxy
-            
-            if self.rank in [0,size]: 
-                print('Worker {} working on {} to {}'.format(self.rank, miny, maxy))
+             
+            print('Worker {} working on {} to {}'.format(self.rank, miny, maxy))
             
         else :
             self.mpi = False
@@ -407,7 +414,7 @@ class SetupKF(object):
         
         if self.verbose:
             print(self.rank,'Selected pixels :',int(np.sum(mask)),'so',\
-                            round(np.sum(mask)/(float(self.Nx*self.Ny))*100.,2),'%')
+                            round(np.sum(self.mask)/(float(self.Nx*self.Ny))*100.,2),'%')
 
         return 
         

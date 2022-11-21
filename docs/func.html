@@ -37,7 +37,7 @@
 <span id="setting-up-the-functional-model"></span><h1><span class="section-number">3. </span>Setting up the functional model<a class="headerlink" href="#module-kf.timefunction" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="kf.timefunction.TimeFct">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.timefunction.</span></span><span class="sig-name descname"><span class="pre">TimeFct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origintime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.timefunction.TimeFct" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">kf.timefunction.</span></span><span class="sig-name descname"><span class="pre">TimeFct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origintime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.timefunction.TimeFct" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialization of the class, which build parametrised function of time. 
 This creates an object that can build functional representations         and spit out names, etc.</p>
 <blockquote>
@@ -75,20 +75,21 @@ This creates an object that can build functional representations         and spi
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">('LOG'</span>&#160;&#160;&#160; <span class="pre">,t1,w1),</span></code></p></td>
 <td><p>starting and characteristic time</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">('BSPLINE',order,t1,w1,t2,w2,...)</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">('BSPLINE',order,t1,w1,t2,w2,...),</span></code></p></td>
 <td><p>peak(s) of deformation centred on <code class="docutils literal notranslate"><span class="pre">ti</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">('ISPLINE',order,t1,w1,t2,w2,...)]</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">('ISPLINE',order,t1,w1,t2,w2,...),</span></code></p></td>
 <td><p>slowslip(s) centred on <code class="docutils literal notranslate"><span class="pre">ti</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">('LISEG'</span>&#160; <span class="pre">,t1,t2,...)]</span></code></p></td>
+<td><p>line segment(s) beween <code class="docutils literal notranslate"><span class="pre">ti</span></code> and <code class="docutils literal notranslate"><span class="pre">t(i+1)</span></code></p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py method">
 <dt class="sig sig-object py" id="kf.timefunction.TimeFct.check_model">
-<span class="sig-name descname"><span class="pre">check_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.check_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.timefunction.TimeFct.check_model" title="Permalink to this definition">¶</a></dt>
-<dd><ul class="simple">
-<li><p><em>verbose</em> : print wordy description of the building block of the model (True or False)</p></li>
-</ul>
+<span class="sig-name descname"><span class="pre">check_model</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.check_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.timefunction.TimeFct.check_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verify number of parameters are consistent and write down summary of model description</p>
 </dd></dl>
 
 <dl class="py method">
@@ -163,13 +164,14 @@ if we are getting temporarily close to the occurence of the event</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kf.timefunction.TimeFct.get_label">
-<span class="sig-name descname"><span class="pre">get_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phase</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.get_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.timefunction.TimeFct.get_label" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tunit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'day'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phase</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kf/timefunction.html#TimeFct.get_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kf.timefunction.TimeFct.get_label" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get an array of labels for each model parameters (name and units) 
 which can be used for plotting</p>
 <blockquote>
 <div><ul class="simple">
 <li><p><em>L</em>     : number of parameters</p></li>
 <li><p><em>unit</em>  : string of length unit</p></li>
+<li><p><em>tunit</em> : string of time unit</p></li>
 <li><p><em>phase</em> : True if sine and cosine amplitudes converted into                         sine amplitude and phase shift</p></li>
 </ul>
 </div></blockquote>

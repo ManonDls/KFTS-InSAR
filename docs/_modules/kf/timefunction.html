@@ -54,7 +54,7 @@
 
 <div class="viewcode-block" id="TimeFct"><a class="viewcode-back" href="../../func.html#kf.timefunction.TimeFct">[docs]</a><span class="k">class</span> <span class="nc">TimeFct</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">origintime</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">origintime</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Initialization of the class, which build parametrised function of time. </span>
 <span class="sd">        This creates an object that can build functional representations \</span>
@@ -75,8 +75,9 @@
 <span class="sd">          ``(&#39;HTAN&#39;   ,t1,w1,t2,w2,...),``             slowslip(s) centred on ``ti``</span>
 <span class="sd">          ``(&#39;EXP&#39;    ,t1,w1),``                       starting and characteristic time</span>
 <span class="sd">          ``(&#39;LOG&#39;    ,t1,w1),``                       starting and characteristic time</span>
-<span class="sd">          ``(&#39;BSPLINE&#39;,order,t1,w1,t2,w2,...)``        peak(s) of deformation centred on ``ti``</span>
-<span class="sd">          ``(&#39;ISPLINE&#39;,order,t1,w1,t2,w2,...)]``       slowslip(s) centred on ``ti``         </span>
+<span class="sd">          ``(&#39;BSPLINE&#39;,order,t1,w1,t2,w2,...),``       peak(s) of deformation centred on ``ti``</span>
+<span class="sd">          ``(&#39;ISPLINE&#39;,order,t1,w1,t2,w2,...),``       slowslip(s) centred on ``ti``      </span>
+<span class="sd">          ``(&#39;LISEG&#39;  ,t1,t2,...)]``                   line segment(s) beween ``ti`` and ``t(i+1)``</span>
 <span class="sd">        ========================================    ========================</span>
 <span class="sd">        </span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -93,74 +94,84 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>         <span class="c1">#reference should be kept as it is</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mod</span>   <span class="o">=</span> <span class="n">model</span>         <span class="c1">#model we will work with, may be truncated/expended</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check</span> <span class="o">=</span> <span class="kc">False</span>         <span class="c1">#has the model been checked? </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
     
-<div class="viewcode-block" id="TimeFct.check_model"><a class="viewcode-back" href="../../func.html#kf.timefunction.TimeFct.check_model">[docs]</a>    <span class="k">def</span> <span class="nf">check_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="TimeFct.check_model"><a class="viewcode-back" href="../../func.html#kf.timefunction.TimeFct.check_model">[docs]</a>    <span class="k">def</span> <span class="nf">check_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39; </span>
-<span class="sd">            * *verbose* : print wordy description of the building block of the model (True or False)</span>
+<span class="sd">        Verify number of parameters are consistent and write down summary of model description</span>
 <span class="sd">        &#39;&#39;&#39;</span>     
-        
-        <span class="k">if</span> <span class="n">verbose</span><span class="o">==</span><span class="kc">False</span><span class="p">:</span>
-            <span class="n">original_stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
-            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
         
         <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#count number of param in m </span>
         <span class="k">for</span> <span class="n">mod</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="p">:</span> 
             <span class="k">if</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;POLY&#39;</span><span class="p">,</span><span class="s1">&#39;POLYNOMIAL&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;POLYNOMIAL&#39;, degree (int)]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Polynomial function of degree&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Polynomial function of degree&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span>
                 
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;COS&#39;</span><span class="p">,</span><span class="s1">&#39;COSINE&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;COSINE&#39;, frequency (float)]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Cosine function of frequency&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Cosine function of frequency&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="o">+</span><span class="mi">1</span>
 
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;SIN&#39;</span><span class="p">,</span><span class="s1">&#39;SINE&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;SINE&#39;, frequency (float)]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Sine function of frequency&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Sine function of frequency&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="o">+</span><span class="mi">1</span>
 
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;STEP&#39;</span><span class="p">,</span><span class="s1">&#39;EARTHQUAKE&#39;</span><span class="p">,</span><span class="s1">&#39;HEAVISIDE&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">&gt;=</span><span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;STEP&#39;, time1, time2, ...]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Heaviside function to model earthquakes at times&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Heaviside function to model earthquakes at times&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
                 
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;HTAN&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">&gt;=</span><span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;HTAN&#39;, time1, width1, time2, width2,...]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Hyperbolic tangent to model slow slip at times&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">],</span><span class="s1">&#39;and width&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Hyperbolic tangent to model slow slip at times&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">],</span><span class="s1">&#39;and width&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
                 
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;EXP&#39;</span><span class="p">,</span> <span class="s1">&#39;EXPONENTIAL&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">==</span><span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;EXP&#39;, start time, characteristic time]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Exponential function (-exp(-x)) starting at time&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;with characteristic time&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Exponential function (-exp(-x)) starting at time&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;with characteristic time&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
 
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;LOG&#39;</span><span class="p">,</span> <span class="s1">&#39;LOGARITHM&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">==</span><span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;LOG&#39;, start time, characteristic time]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Logarithmic function starting at time&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;with characteristic time&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Logarithmic function starting at time&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;with characteristic time&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
         
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;Bsp&#39;</span><span class="p">,</span> <span class="s1">&#39;BSPLINE&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">&gt;=</span><span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;BSPLINE&#39;, order, time1, width1, time2, width2]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ B-Spline of degree&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;centred on times&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="mi">2</span><span class="p">],</span><span class="s1">&#39;and with width&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ B-Spline of degree&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;centred on times&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="mi">2</span><span class="p">],</span><span class="s1">&#39;and with width&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
                 
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;Isp&#39;</span><span class="p">,</span> <span class="s1">&#39;ISPLINE&#39;</span><span class="p">):</span>
                 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">&gt;=</span><span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;ISPLINE&#39;, order, time1, width1, time2, width2]&quot;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Integrated Spline of degree&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;centred on times&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="mi">2</span><span class="p">],</span><span class="s1">&#39;and with width&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Integrated Spline of degree&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;centred on times&#39;</span><span class="p">,</span> <span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="mi">2</span><span class="p">],</span><span class="s1">&#39;and with width&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">3</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">2</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>
+            
+            <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;LISEG&#39;</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">&gt;=</span><span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;Syntax: [&#39;LISEG&#39;,start_time,stop1,stop2,...]&quot;</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+ Linear segment(s) between times&#39;</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span><span class="s1">&#39;and end of time series&#39;</span><span class="p">)</span>
+                <span class="n">k</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span><span class="o">+</span><span class="mi">1</span> <span class="c1">#cste + one slope by time span </span>
+
             
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Functional form unknown: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">=</span> <span class="n">k</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;There need to be&#39;</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="s1">&#39;parameters in m&#39;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;**** MODEL OK ****&#39;</span><span class="p">)</span> 
-        <span class="bp">self</span><span class="o">.</span><span class="n">check</span> <span class="o">=</span> <span class="kc">True</span>
-        
-        <span class="k">if</span> <span class="n">verbose</span><span class="o">==</span><span class="kc">False</span><span class="p">:</span>
-            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">original_stdout</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;There need to be&#39;</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="s1">&#39;parameters in m&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;**** MODEL OK ****&#39;</span><span class="p">)</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">check</span> <span class="o">=</span> <span class="kc">True</span></div>
         
         
 <div class="viewcode-block" id="TimeFct.transition_vect"><a class="viewcode-back" href="../../func.html#kf.timefunction.TimeFct.transition_vect">[docs]</a>    <span class="k">def</span> <span class="nf">transition_vect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
@@ -243,7 +254,23 @@
                     
                 <span class="n">A</span><span class="p">[</span><span class="n">k</span><span class="p">:</span><span class="n">k</span><span class="o">+</span><span class="n">nb_is</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="n">nb_is</span>
+            
+            <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;LISEG&#39;</span><span class="p">:</span>
+                <span class="n">A</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span> <span class="c1">#cste a0</span>
+                <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
                 
+                <span class="c1">#slopes depending on time </span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)):</span>
+                    <span class="n">maskt</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span> <span class="o">&gt;</span> <span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="c1">#else until end of timeseries</span>
+                        <span class="c1">#set maximum date </span>
+                        <span class="n">maskt</span> <span class="o">*=</span> <span class="p">(</span><span class="n">t</span> <span class="o">&lt;</span> <span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="c1">#for continuity with next segment</span>
+                        <span class="n">A</span><span class="p">[</span><span class="n">k</span><span class="p">,(</span><span class="n">t</span> <span class="o">&gt;</span> <span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])]</span> <span class="o">=</span> <span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="c1">#a1*t1</span>
+                        
+                    <span class="n">A</span><span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="n">maskt</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">maskt</span><span class="p">]</span> <span class="o">-</span> <span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="c1">#a1*(t-t1) for t&gt;t0 &amp; t&lt;t1</span>
+                    <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+                    
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Functional form unknown: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span>
         
@@ -282,7 +309,8 @@
 <span class="sd">                        in the same order as in model \</span>
 <span class="sd">                        (correspond to first elements of state vector m)&#39;&#39;&#39;</span>     
         
-        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">coeff</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span> <span class="s2">&quot;number of parameters do no match functional model&quot;</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">coeff</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span><span class="s2">&quot;number of parameters </span><span class="si">{}</span><span class="s2"> do no match functional</span><span class="se">\</span>
+<span class="s2">        model (</span><span class="si">{}</span><span class="s2"> expected)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">coeff</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">)</span>
 
         <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transition_vect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)</span>
         
@@ -378,12 +406,16 @@
                 <span class="n">k</span> <span class="o">+=</span> <span class="n">nb_eq</span>
                     
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;HTAN&#39;</span><span class="p">):</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: haven&#39;t been tested&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: HTAN function haven&#39;t been tested&quot;</span><span class="p">)</span>
                 <span class="n">nb_ss</span> <span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb_ss</span><span class="p">):</span>
                     <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="n">i</span><span class="o">*</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">t0</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="n">nb_ss</span>
-                
+            
+            <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;LISEG&#39;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
+                    <span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">t0</span>
+                    
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Functional form unknown: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span>
             <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -455,6 +487,14 @@
                         <span class="k">if</span> <span class="n">k</span><span class="o">==</span><span class="n">N</span><span class="p">:</span>
                             <span class="k">break</span> 
                 
+                <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;LISEG&#39;</span><span class="p">:</span>
+                    <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1">#cste </span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
+                        <span class="k">if</span> <span class="n">k</span><span class="o">==</span><span class="n">N</span><span class="p">:</span>
+                            <span class="k">break</span>
+                        <span class="n">kk</span> <span class="o">=</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span>
+                        <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span> 
+                        
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Functional form unknown: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span>
                 
@@ -488,7 +528,7 @@
                     <span class="n">kk</span> <span class="o">+=</span> <span class="mi">1</span>
                     <span class="k">continue</span>
             
-            <span class="k">if</span> <span class="n">ref</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;STEP&#39;</span><span class="p">,</span><span class="s1">&#39;EARTHQUAKE&#39;</span><span class="p">,</span><span class="s1">&#39;HEAVISIDE&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ref</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;STEP&#39;</span><span class="p">,</span><span class="s1">&#39;EARTHQUAKE&#39;</span><span class="p">,</span><span class="s1">&#39;HEAVISIDE&#39;</span><span class="p">,</span><span class="s1">&#39;LISEG&#39;</span><span class="p">):</span>
                 <span class="n">times</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ref</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">t</span><span class="o">+</span><span class="n">dt</span><span class="p">)]</span>
                 <span class="n">indx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">indx</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span>
@@ -567,7 +607,14 @@
                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;    Consider it has already converged to a reliable value because </span><span class="si">{}</span><span class="s2"> &gt; starting time (</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dtmax</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
                        <span class="n">Cstindex</span> <span class="o">=</span> <span class="n">k</span>
                        <span class="n">k</span> <span class="o">+=</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span>
-                
+                       
+                <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;LISEG&#39;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">))</span> <span class="p">:</span> 
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">dtmax</span> <span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Stop optimization of the linear segment from </span><span class="si">{}</span><span class="s2">-</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: code not optimized for this, nothing done&quot;</span><span class="p">)</span>
+                    <span class="n">k</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span><span class="o">+</span><span class="mi">1</span>
+                            
                 <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;STEP&#39;</span><span class="p">,</span><span class="s1">&#39;EARTHQUAKE&#39;</span><span class="p">,</span><span class="s1">&#39;HEAVISIDE&#39;</span><span class="p">):</span>
                     <span class="n">kkk</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1">#local count</span>
                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">))</span> <span class="p">:</span> 
@@ -649,6 +696,9 @@
         <span class="k">for</span> <span class="n">mod</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mod</span> <span class="p">:</span> 
             <span class="k">if</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;POLY&#39;</span><span class="p">,</span><span class="s1">&#39;POLYNOMIAL&#39;</span><span class="p">):</span>
                 <span class="n">k</span> <span class="o">+=</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span>
+            
+            <span class="k">if</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;LISEG&#39;</span><span class="p">:</span>
+                <span class="n">k</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">[:</span><span class="mi">1</span><span class="p">])</span><span class="o">+</span><span class="mi">1</span>
                     
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;COS&#39;</span><span class="p">,</span><span class="s1">&#39;COSINE&#39;</span><span class="p">):</span>
                 <span class="n">freqs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
@@ -711,12 +761,13 @@
         <span class="k">return</span> <span class="n">m_out</span><span class="p">,</span> <span class="n">P_out</span></div>
         
         
-<div class="viewcode-block" id="TimeFct.get_label"><a class="viewcode-back" href="../../func.html#kf.timefunction.TimeFct.get_label">[docs]</a>    <span class="k">def</span> <span class="nf">get_label</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">unit</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="TimeFct.get_label"><a class="viewcode-back" href="../../func.html#kf.timefunction.TimeFct.get_label">[docs]</a>    <span class="k">def</span> <span class="nf">get_label</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">unit</span><span class="p">,</span> <span class="n">tunit</span><span class="o">=</span><span class="s1">&#39;day&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39; </span>
 <span class="sd">        Get an array of labels for each model parameters (name and units) </span>
 <span class="sd">        which can be used for plotting</span>
 <span class="sd">            * *L*     : number of parameters</span>
 <span class="sd">            * *unit*  : string of length unit</span>
+<span class="sd">            * *tunit* : string of time unit</span>
 <span class="sd">            * *phase* : True if sine and cosine amplitudes converted into \</span>
 <span class="sd">                        sine amplitude and phase shift &#39;&#39;&#39;</span>
          
@@ -734,6 +785,15 @@
                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
                         <span class="n">label</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Polynomial coef.</span><span class="se">\n</span><span class="s1"> $(mm/day^</span><span class="si">%d</span><span class="s1">)$&#39;</span><span class="o">%</span><span class="n">i</span>
                         <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;LISEG&#39;</span><span class="p">:</span>
+                <span class="n">label</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span>  <span class="s1">&#39;Offset</span><span class="se">\n</span><span class="s1"> (</span><span class="si">%s</span><span class="s1">)&#39;</span><span class="o">%</span><span class="n">unit</span>  
+                <span class="n">k</span> <span class="o">+=</span><span class="mi">1</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="n">label</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Velocity from </span><span class="si">{}</span><span class="se">\n</span><span class="s2"> to </span><span class="si">{}</span><span class="s2"> $(</span><span class="si">{}</span><span class="s2">/day)$&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span><span class="n">unit</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="p">:</span> 
+                        <span class="n">label</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Velocity from </span><span class="si">{}</span><span class="se">\n</span><span class="s2"> to </span><span class="si">{}</span><span class="s2"> $(</span><span class="si">{}</span><span class="s2">/day)$&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mod</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">unit</span><span class="p">)</span>
+                    <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
                     
             <span class="k">elif</span> <span class="n">mod</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;COS&#39;</span><span class="p">,</span><span class="s1">&#39;COSINE&#39;</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">phase</span><span class="o">==</span> <span class="kc">True</span><span class="p">:</span>

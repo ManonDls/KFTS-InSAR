@@ -289,8 +289,7 @@ class BuildStack(object):
         self.verbose = verbose
         self.ylims = ylims
         self.xlims = xlims
-        if verbose: 
-       
+        if verbose:  
             print("Initialize stack")
 
     #--------------------------------------
