@@ -128,7 +128,40 @@ class SetupKF(object):
         else : 
             assert False, "unit of time {} not understood".format(utime)
         self.unit = utime 
+    
+    def shifttime(self,tshift):
+        self.time += tshift
+    '''
+    def extendtime(self,fulltime,fulldate):
+        
+        if len(fulltime)> np.shape(self.links)[1]:
+            if self.verbose:
+                print("{} dates in state and not in data".format(len(fulltime)-np.shape(self.links)[1]))
+            dataindx = [i for i,t in enumerate(fulldate) if t in self.orddates]
+            newlink = np.zeros((np.shape(self.links)[0],len(fulltime)))
+            newlink[:,np.array(dataindx)] = self.links
+            self.links = newlink
 
+        elif len(fulltime)< np.shape(self.link)[1]:
+            #WARNING: columns of links and time must be of same length, modify links
+            data.links  = data.links[:,-len(fulltime):]
+
+        data.time = fulltime
+        data.orddates = fulldate'''
+
+    def verifyinittime(self,orddatestart):
+        ''' Shift time if start doesn't correspond to specified orddatestart'''
+        
+        if self.orddates[0] != orddatestart:
+            tshift = self.orddates[0] - orddatestart #in days
+            if self.unit == 'years':
+               tshift *= 1/365.25 
+            self.time += tshift
+            if self.verbose :
+                init  = dt.datetime.fromordinal(orddatestart)
+                print("Reference time is shifted by {} {}".format(tshift,self.unit))
+                print("New starting date is {}/{}/{}".format(init.year,init.month,init.day))
+        
 
     def dividepxls(self, mpi, mpiarg):
         '''
@@ -493,6 +526,7 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
         :statefile: file name and location 
         :phasefile: file name and location 
         :L:         number of parameters 
+        :data:      data object from `SetupKF` class 
         :model:     model description in tuple used for timefunction.py
         :store:     is a tuple of things to store
         :updtfile:  file name to store additional statistics about KF analysis
@@ -535,7 +569,10 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
     indx.attrs['help'] = 'Indexes of the phases still within the state m (in parms)'
 
     subtime = fstates.create_dataset('tims',(tsep,),'float64')
-    subtime.attrs['help'] = 'times corresponding to phases in state in decimal years with respect to first phase with ti= '+str(data.date[0])
+    subtime.attrs['help'] = 'Times corresponding to phases in state in decimal years with respect to first phase with ti= '+str(data.date[0])
+    
+    subdate = fstates.create_dataset('dates',(tsep,),'i8')
+    subdate.attrs['help'] = 'Ordinal dates corresponding to phases in state'
 
     pn = fstates.create_dataset('processnoise',data=m_err)
     pn.attrs['help'] = 'Process noise for functional model parameters'
@@ -545,6 +582,9 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
 
     mc = fstates.create_dataset('misclosure',data=sig_eps)
     mc.attrs['help'] = 'Misclosure error included in data covariance'
+    
+    di = fstates.create_dataset('dateinit',data=data.orddates[0])
+    di.attrs['help'] = 'Starting date of time series used by model (t=0.0) in ordinal days'
 
     # Save time series of deformation 
     rawts = fphases.create_dataset('rawts',(Ny,Nx,lent),'f')

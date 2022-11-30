@@ -47,14 +47,15 @@ class Kalman(object):
         self.modelobj  = fctmod
         self.model     = fctmod.model
         self.L         = fctmod.L
-        
+             
         ### Store essential information
         #self.dataobj = data
         self.data    = data.igram[:,j,i]
         self.t       = data.time
         self.link    = data.links[:]
         self.Rdat    = data.R
-        
+        self.dates   = data.orddates
+
         self.link[:,0] = 0
         
         # For 2D store index of pixels
@@ -88,11 +89,6 @@ class Kalman(object):
         
         # Keep strack of where we are with respect to first data of time series
         self.m_indxs  = indxs                             #indexes of phases in m after prediction phase 
-        self.t        = np.concatenate((pasttime,self.t))
-        self.t        = np.unique(self.t)                 
-
-        if len(self.modelobj.t) < len(self.t): 
-            self.modelobj.t = self.t
 
         self.phases   = []                         #phases already computed 
         self.std      = []                         #std of phases already computed
@@ -101,17 +97,13 @@ class Kalman(object):
         len_m0      = self.m.shape[-1] -len(pasttime)     #number of parameters in the m stored, define initial model
         self.Lref   = self.L                              #max number of parameters as predicted by the model
         
-        self.get_model_from_num_of_param(len_m0)
-               
-        if np.shape(self.link)[1] != len(self.t):  
-            #WARNING: columns of links and time must be of same length, modify links
-            self.link   = self.link[:,-len(self.t):]
+        #self.get_model_from_num_of_param(len_m0)
         
         if dtmax is not None :
+            print("WARNING: not tested yet")
             self.m,self.P = self.modelobj.remove_oldstuff(self.m,self.P)
             self.mod = self.modelobj.mod
             self.L = self.modelobj.L
-            
             
     def start_new(self,m0, P0):
         '''
@@ -511,10 +503,16 @@ class Kalman(object):
             
             self.m_indxs = np.append(self.m_indxs, self.idx0+k) #add last phase index 
             self.create_H_R_and_D(k, self.m_indxs-self.idx0)
-        
+
             #Update matrices
             self.create_Q(m_err,phi_err,add_err,len(self.m))
             self.A = self.modelobj.create_A(k-1,len(self.m))
+            
+            #Modify a priori on parameter based on previous estimate
+            if self.modelobj.t[k] in self.modelobj.flag:
+                i1,i2 = self.modelobj.idxpair
+                #self.P[i2,i2] = self.P[i1,i1]
+                self.m[i2] = self.m[i1]
 
             (mf,Pf) = self.predict(self.m, self.P, self.A, self.Q)
             (self.m,self.P) = self.update(mf, Pf)
@@ -589,6 +587,7 @@ class Kalman(object):
             #Store pixel independent information
             outstates['indx'][:]  = self.m_indxs
             outstates['tims'][:]  = self.t[self.m_indxs-self.idx0]
+            outstates['dates'][:] = self.dates[self.m_indxs-self.idx0] 
             outphase['idx0'][...] = self.idx0
             outphase['tims'][:]   = self.t
         

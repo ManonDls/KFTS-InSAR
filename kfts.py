@@ -220,6 +220,36 @@ class RunKalmanFilter(object):
 
         return Leq,P0eq
     
+    def adjust_apriori(self,tfct):
+        '''
+        Flag time steps at which the state has to be adjusted
+        for an optimized a priori depending on previous estimates
+        (used for linear segments to avoid null initialisation) 
+        '''
+        
+        modliseg = [mod for mod in tfct.model if ('LISEG' in mod)]
+        
+        if len(modliseg) > 0:
+             print("Linear segments in model parameter")
+             modliseg = modliseg[0]
+             
+             numparam = len(tfct.idexliseg)
+             if numparam > 2: #cst, vel1
+                print("set the apriopri of the next segment slope to previous segment slope")
+                i = 0
+                flagt = np.zeros(numparam-2)
+                idxpair =  np.zeros((2,numparam-2),dtype=int) #idx of subsitutions in state 0 to 1
+                for t in modliseg[2:] : #time limits from 2nd one
+                    flagt[i] = tfct.t[tfct.t>modliseg[i+2]][0]
+                    idxpair[:,i] = tfct.idexliseg[i+1], tfct.idexliseg[i+2] #index 
+                    i+=1
+         
+                tfct.flagspecifictime(flagt, idxpair) 
+        else : 
+            if self.isTraceOn():
+                print("Model doesn't contain linear segments (no time flagged)")
+
+
     def loadcheck_pastoutputs(self,data,tfct):
         '''
         Check input file consitency when restarting and frame time series update 
@@ -227,34 +257,80 @@ class RunKalmanFilter(object):
             * *tfct* : initiated model class 
         '''
         
-        # Import common things to all pixels to gain time 
+        ## Import common things to all pixels to gain time 
+        if self.comm is False:
+            fin = h5py.File(self.instate,'r')
+        else :
+            fin = h5py.File(self.instate,'r',driver='mpio',comm=self.comm)
+        
         finstate  = h5py.File(self.instate,'r')
         statetime = finstate['tims'][:]     #contains as many dates than state contains phases
+        statedate = finstate['dates'][:]    
         indxs     = finstate['indx'][:].tolist()
+        dateinit  = finstate['dateinit'][...]  #recorded start of time series (t=0.0 in model)
         
-        # Identify new dates with respect to former state
-        newdate = [t for t in data.time if t not in statetime]
+        ## Fall on a unique time line !
+        if statedate[0] > data.orddates[0]:
+           # Some already processed data remaining in data object
+           print("New data involves timesteps older ({}) than what was retained in the former state ({})".format(data.orddates[0],statedate[0]))
+           olddates = [i for i,t in enumerate(data.orddates) if t>statedate[0]]
+           data.truncatetime(olddate) #careful with long baselines
+           
+        # Identify new dates with respect to former state (all dates are ordered)
+        samedates = [i for i,t in enumerate(data.orddates) if t in statedate]
+        newdates  = [i for i,t in enumerate(data.orddates) if t not in statedate]
         
         # Check consistency 
-        assert (len(newdate)  > 0), "No supplementary date in file {} wrt existing {}".format(self.infile,self.instate)
-        assert (statetime[0] <= data.time[0]), "New data involves timesteps older than what was retained in the former state"
+        assert (len(newdates) > 0), "No supplementary date in file {} wrt existing {}".format(self.infile,self.instate)
+        assert (len(samedates) > 0), "No overlapping between previous and new dataset" 
         
+        # Align time based on ordinal dates
+        samedatestate = [i for i,t in enumerate(statedate) if t in data.orddates]
+        tdiff = statetime[np.array(samedatestate)] - data.time[np.array(samedates)]
+        if len(tdiff)>1:
+            if np.sum(tdiff[:-1]-tdiff[1:])>0.1:
+                assert False, "A constant time shift doesn't align data"
+        
+        # Align time to initial time in loaded model
+        data.shifttime(tdiff[0])
+        
+        #merge both time span 
+        newdatestate = [i for i,t in enumerate(statedate) if t not in data.orddates]
+        fulltime = np.concatenate((statetime[np.array(newdatestate)],data.time))
+        fulldate = np.concatenate((statedate[np.array(newdatestate)],data.orddates))
+        
+        #add columns to link if necessary 
+        if len(fulltime)> np.shape(data.links)[1]:
+            if self.isTraceOn():
+                print("{} dates in state and not in data".format(len(fulltime)-np.shape(data.links)[1]))
+            dataindx = [i for i,t in enumerate(fulldate) if t in data.orddates]
+            newlink = np.zeros((np.shape(data.links)[0],len(fulltime)))
+            newlink[:,np.array(dataindx)] = data.links
+            data.links = newlink
+
+        elif len(fulltime)< np.shape(data.links)[1]:
+            #WARNING: columns of links and time must be of same length, modify links
+            data.links  = data.links[:,-len(fulltime):]
+
+        data.time = fulltime
+        data.orddates = fulldate
+        tfct.t = data.time
+
         # Set number of phases to keep for latter update
         data.max_tsep = np.max([data.max_tsep,len(statetime)])
-        toverl = len(statetime) - len(data.time) + len(newdate) #number of past dates not in data to recover
         
         if self.isTraceOn():
-            print('Data contains {} new time steps'.format(len(newdate)))
-            print('There are {} estimates that will be potentially updated'.format(len(indxs)-toverl))
-        
+            print('Data contains {} new time steps'.format(len(newdates)))
+
         # Look for parameters concerning old stuff wrt starting time
         if self.dtmax is not None: 
             tfct.identify_outdated(self.dtmax) 
             if tfct.Cstindex is None : 
                 self.dtmax  == None
         
-        return finstate, statetime, indxs, toverl
+        return finstate, statetime, indxs
         
+
 
     def initCovariances(self, L):
         '''Create arrays for the initial state Covariance matrix (P0)
@@ -268,6 +344,7 @@ class RunKalmanFilter(object):
         phi_err = 0.0                   # Incertitude sur interfero
         add_err = (self.sig_y)**2       # Uncertainty on newly added phase
         return P_par, m_err, phi_err, add_err
+
 
     def initPlot(self, data, figdir):
         '''Draw quick plots to visualize input data:
@@ -323,7 +400,10 @@ class RunKalmanFilter(object):
         
         if self.PLOT : 
             self.initPlot(data, self.figdir)
-            
+        
+        # Check LISEG and impose clever apriori if so
+        self.adjust_apriori(tfct)
+
         #---------------------------------------------------------------------------
         ## Kalman Filter
         kf_start = TIME.time()
@@ -333,10 +413,11 @@ class RunKalmanFilter(object):
         #bound t_sep to save memory 
         data.max_tsep = np.min([data.max_tsep,10])
 
-        toverl = 0
         tshift = 1
         if self.UPDT == True:
-            finstate, statetime, indxs, toverl = self.loadcheck_pastoutputs(data,tfct)
+            if self.isTraceOn():
+                print('-- Load state from previous KFTS run --')
+            finstate, statetime, indxs = self.loadcheck_pastoutputs(data,tfct)
             tshift = len(indxs)
             
         if self.isTraceOn():
@@ -352,9 +433,9 @@ class RunKalmanFilter(object):
         fstates, fphases, fupdate = infmt.initiatefileforKF(
                     os.path.join(self.outdir, 'States{}.h5'.format(sufx)), 
                     os.path.join(self.outdir, 'Phases{}.h5'.format(sufx)),
-                    L, data, self.model, (m_err,self.sig_i,self.sig_y),
+                    tfct.L, data, self.model, (m_err,self.sig_i,self.sig_y),
                     updtfile= os.path.join(self.outdir, 'Updates{}.h5'.format(sufx)),
-                    comm = self.comm, toverlap = toverl, tshift = tshift)
+                    comm = self.comm, tshift = tshift)
 
         if self.isTraceOn():
             print('-- START Kalman Filter --')

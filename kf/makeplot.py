@@ -14,7 +14,7 @@ import scipy.linalg as la
 import scipy.interpolate as sciint
 
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as mcm
@@ -109,6 +109,9 @@ def plot_param_2D(figname, m, L, xv, yv, bounds=None, names=None, axlim=None, cm
                 param_names.append('step'+str(k))
 
     for i in range(L):
+        if np.sum(np.isnan(bounds[i]))>0:
+            print("WARNING: Parameter {} is all NaN or Zeros".format(i))
+            continue  
         if norm =='linear':
             img0 = ax[i].pcolormesh(xv,yv,m[:,:,i],vmin=bounds[i][0],vmax=bounds[i][1],cmap=cm)
         elif norm =='center':
@@ -159,7 +162,8 @@ def plot_TS(figname, time, rawts, err, pixel=None, model=[], params=[], label=[]
         mod = TimeFct(time,model)
         mod.check_model()
         if time[0] >0:
-            params = mod.shift_t0(time[0],params)
+            print("Time series start at {}".format(time[0]))
+            #params = mod.shift_t0(time[0],params)
             
     #pixel argument not specified means that rawts contain 1 time series
     if pixel==None :
@@ -199,12 +203,16 @@ def plot_TS(figname, time, rawts, err, pixel=None, model=[], params=[], label=[]
                 if tidx ==0:
                     plt.errorbar(time,rawts[:,i,j],yerr=err[:,i,j],fmt='.',color=cmcycle[k],label=lab)
                     if len(model)>0 and len(params)>0 :
-                        curve = mod.draw_model(params[:,i,j])
+                        par = params[:,i,j]
+                        par[np.isnan(par)]=0.0
+                        curve = mod.draw_model(par)
                         ax.plot(time,curve,'-',c=cmcycle[k],linewidth=0.8)
                 elif tidx==2:
                     plt.errorbar(time,rawts[i,j,:],yerr=err[i,j,:],fmt='.',color=cmcycle[k],label=lab)
                     if len(model)>0 and len(params)>0 :
-                        curve = mod.draw_model(params[i,j,:])
+                        par = params[i,j,:]
+                        par[np.isnan(par)]=0.0
+                        curve = mod.draw_model(par)
                         ax.plot(time,curve,'-',c=cmcycle[k],linewidth=0.8)
                 
                 else:
@@ -308,7 +316,7 @@ def view_data(igram, interf_list, locfig, dim=(0,0)):
     plt.close()
         
 
-def plot_baselines(t, bperp, imoins, iplus, locfig, cm=plt.get_cmap('jet'), resol=250):
+def plot_baselines(t, bperp, imoins, iplus, locfig, cm=plt.get_cmap('jet'), resol=250, suffix=''):
     '''
     Plot baselines and interferograms
     * t             : time array (N)
@@ -366,7 +374,7 @@ def plot_baselines(t, bperp, imoins, iplus, locfig, cm=plt.get_cmap('jet'), reso
         ax.set_xlabel('Time (yrs)') 
 
     fig.tight_layout()
-    fig.savefig(locfig+'baselines.png',bbox_inches='tight',dpi=resol)
+    fig.savefig(locfig+'baselines{}.png'.format(suffix),bbox_inches='tight',dpi=resol)
     plt.close()
     
     
@@ -450,7 +458,7 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
         print("Warning: Computing bounds of color scale, may be very long for big array")
         bounds = [np.nanmean(igrams)-2*np.nanstd(igrams),np.nanmean(igrams)+2*np.nanstd(igrams)]
         print("bounds",bounds)
-    
+
     #Get appropriate size for Figure
     aratio = (np.max(lon)-np.min(lon))/(np.max(lat)-np.min(lat))
     scale = 10

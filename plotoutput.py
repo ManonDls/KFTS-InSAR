@@ -164,7 +164,7 @@ if args.geom is not None:
    yv    = np.reshape(lat,(ny,nx))
    xv    = np.reshape(lon,(ny,nx))
 else :
-   yv,xv = np.meshgrid( list(range(nx)),list(range(ny)) )
+   xv,yv = np.meshgrid( list(range(nx)),list(range(ny)) )
 
 #deal with zero lon and lat
 if args.box is None:
@@ -211,7 +211,7 @@ if VOLC :
     print('Volcanoes',namevolc)
 
 #Initiate model class
-mod = TimeFct(dates,model)
+mod = TimeFct(dates,model,verbose=True)
 mod.check_model()
 parm_names = mod.get_label(L,'mm')
 
@@ -281,7 +281,7 @@ Ypxl= np.random.randint(0,ny-1,size=Npix)
 Xpxl= np.random.randint(0,nx-1,size=Npix)
 pixels = [(i,j)for i,j in zip(Ypxl,Xpxl)]
 letter = ['A','B','C','D','E','F']
-
+pixels[0] = (7,38)
 dates = dates[:]
 mplt.plot_TS(os.path.join(locfig, 'timeseries_randpxls_one.png'), dates, phases, ph_std,
             pixel=pixels, model=model, params=parms[:], label=letter)
@@ -290,13 +290,14 @@ fig0,ax0 = plt.subplots(1,len(pixels),figsize=(11,2.9),sharex=True,sharey=True)
 ax0 = ax0.ravel()
 
 # Change reference time of descriptive model 
-params = mod.shift_t0(dates[0],parms[:])
+#params = mod.shift_t0(dates[0],parms[:])
 
 k=0
 for indx in pixels:
     i,j = indx
-    
-    curve = mod.draw_model(params[i,j,:])
+    par = parms[i,j,:]
+    par[np.isnan(par)]=0.0
+    curve = mod.draw_model(par)
     ax0[k].errorbar(dates,phases[i,j,:],yerr=ph_std[i,j,:],
                         fmt='.',lw=0.8,color='C0',markersize=4,label='phases')
     ax0[k].plot(dates,curve,'-',c='red',linewidth=0.8,label='model',zorder=4)
@@ -359,6 +360,12 @@ if VOLC :
                         fontsize=9,horizontalalignment='center')
 
 plt.colorbar(img0,ax=ax)
+#refframe = np.array([[2855,208],[2057,623],[1367,848],[837,879],[1035,618],[1409,355],
+#                        [1916,0],[119,0],[119,1600],[2300,1600],[2855,1050],[2855,208]]) #y,x
+#plt.plot(refframe[:,1],refframe[:,0],'k--')
+#plt.ylim(ax.get_ylim()[::-1])
+#print([(x,y) for x,y in zip(refframe[:,1],refframe[:,0])])
+#plt.show()
 fig.savefig(os.path.join(locfig, 'displacement.png'),dpi=250,bbox_inches='tight')
 
 ########## Project on regular axes 

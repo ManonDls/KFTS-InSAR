@@ -62,6 +62,7 @@ class TimeFct(object):
         self.mod   = model         #model we will work with, may be truncated/expended
         self.check = False         #has the model been checked? 
         self.verbose = verbose
+        self.flag = []
     
     def check_model(self):
         ''' 
@@ -128,8 +129,8 @@ class TimeFct(object):
                 assert len(mod)>=3, "Syntax: ['LISEG',start_time,stop1,stop2,...]"
                 if self.verbose:
                     print('+ Linear segment(s) between times',mod[1:],'and end of time series')
+                self.idexliseg = np.array(range(k,len(mod)))
                 k += len(mod[1:])+1 #cste + one slope by time span 
-
             
             else:
                 assert False, 'Functional form unknown: {}'.format(mod)
@@ -309,6 +310,12 @@ class TimeFct(object):
         
         return A
     
+    def flagspecifictime(self,flag,idxpair):
+        ''' specific for LISEG model element'''
+
+        self.flag = flag
+        self.idxpair = idxpair
+
     def shift_t0(self,t0,coeff):
         ''' 
             * t0 : shift in t0 (t0_new -t0_old)
@@ -560,9 +567,10 @@ class TimeFct(object):
         modeldel = []    # model element and index inside 
         Cstindex = None  # index of cst term if time to fix it 
           
-        if self.t[0] < dtmax : 
-            print("Starting time is {}".format(self.t[0]))
-            print("Existing model agrees with the maximum delta time set to {}".format(dtmax))
+        if self.t[0] < dtmax :
+            if self.verbose:
+                print("Starting time is {}".format(self.t[0]))
+                print("Existing model agrees with the maximum delta time set to {}".format(dtmax))
         
         else :
             k  = 0 #count number of parameters
@@ -570,10 +578,11 @@ class TimeFct(object):
             for mod in self.mod:
                 if mod[0] in ('POLY','POLYNOMIAL'):
                     if mod[1]>=0:
-                       print("Fix model at origin (i.e. polynomial term of order zero).")
-                       print("    Consider it has already converged to a reliable value because {} > starting time ({})".format(dtmax,self.t[0]))
-                       Cstindex = k
-                       k += mod[1]+1
+                        if self.verbose:
+                            print("Fix model at origin (i.e. polynomial term of order zero).")
+                            print("    Consider it has already converged to a reliable value because {} < starting time ({})".format(dtmax,self.t[0]))
+                        Cstindex = k
+                        k += mod[1]+1
                        
                 elif mod[0] == 'LISEG':
                     for i in range(2, len(mod)) : 
@@ -586,7 +595,8 @@ class TimeFct(object):
                     kkk = [] #local count
                     for i in range(1, len(mod)) : 
                         if self.t[0] > mod[i] + dtmax :
-                            print("Remove event centered on {}".format(mod[1+i]))
+                            if self.verbose:
+                                print("Remove event centered on {}".format(mod[1+i]))
                             indexdel.append(k)
                             kkk.append(i)
                         modeldel.append((kk,kkk))
@@ -614,11 +624,16 @@ class TimeFct(object):
             #remove specified indexes
             newtiming = [t for i,t in enumerate(self.mod[kk]) if i not in kkk]
             newmod[kk] = tuple(newtiming)
-            
-        #save new model
-        print("Define new model {}".format(newmod))
-        self.mod = newmod
         
+        Ldiff = len(indexdel)
+        
+        #save new model
+        if self.verbose:
+            print("Define new model {}".format(newmod))
+            print("Remove {} parameters".format(Ldiff))
+        self.mod = newmod
+        self.L  -= Ldiff
+
     
     def remove_oldstuff(self, m, P):
         '''
@@ -642,7 +657,8 @@ class TimeFct(object):
             P[:,self.Cstindex] = 0 
             
         else :
-            print("No outdated parameters identified. Model stay unchanged.")
+            if self.verbose:
+                print("No outdated parameters identified. Model stay unchanged.")
         
         return m, P
         
