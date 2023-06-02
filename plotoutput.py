@@ -281,7 +281,7 @@ Ypxl= np.random.randint(0,ny-1,size=Npix)
 Xpxl= np.random.randint(0,nx-1,size=Npix)
 pixels = [(i,j)for i,j in zip(Ypxl,Xpxl)]
 letter = ['A','B','C','D','E','F']
-pixels[0] = (7,38)
+
 dates = dates[:]
 mplt.plot_TS(os.path.join(locfig, 'timeseries_randpxls_one.png'), dates, phases, ph_std,
             pixel=pixels, model=model, params=parms[:], label=letter)
