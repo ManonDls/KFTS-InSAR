@@ -607,7 +607,7 @@ if __name__ == '__main__':
     #Single sensor being used.
     scl = 1000 *args.wvl/(4*np.pi) ####Converting to mm.
                 
-    for k in range(10):
+    for k in range(Nifg):
         if args.ilist is None:
             #####File names not provided as input
             iname,cname = makefnames(args.igramsdir,dates[k,0],dates[k,1]) #cname may not exist at this stage
