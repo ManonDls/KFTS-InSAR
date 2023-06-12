@@ -7,14 +7,9 @@
 #############################################################################
     
 import numpy as np
-import h5py
 import time
-import sys
 import logging
-import re
 import os
-import collections
-import lxml.objectify as ob
 import scipy.io.netcdf as netcdf
 
 ###############################File I/O Utils ############################
