@@ -147,12 +147,12 @@ class TimeFct(object):
         Build linear transition vector that gives the model
             * *t* : time can be one date or an array of dates'''
         
-        if (isinstance(t,float) or isinstance(t,int)) :
+        if isinstance(t,(float,int,np.float32,np.int8)) :
             A = np.zeros(self.L)      
         elif t.ndim == 1 :
             A = np.zeros((self.L,len(t)))
         else :
-            assert False, "Format time not understood"
+            assert False, "Format time not understood {}".format(type(t))
         
         k = 0
         for mod in self.mod : 
