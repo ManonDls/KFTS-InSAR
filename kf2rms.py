@@ -103,8 +103,8 @@ else:
     # Create new datasets
     igram_comp = ofil.create_dataset('igram_comp',data.igram.shape, dtype='float32')
     rms        = ofil.create_dataset('rms',data.igram.shape[1:], dtype='float32')
+    signdiff   = ofil.create_dataset('signdiff',data.igram.shape[1:], dtype='float32')
     #res        = ofil.create_dataset('res',igram.shape, dtype='float32')
-
 
     ############## Reconstitute interferograms and compute RMS #####################
 
@@ -136,6 +136,7 @@ else:
 
         #compute RMS
         ofil['rms'][x,:] = np.sqrt(np.nansum((data.igram[:,x,:] - igram_comp[:,x,:])**2,axis=0)/N)
+        ofil['signdiff'][x,:] = np.nansum((data.igram[:,x,:] - igram_comp[:,x,:]),axis=0)/N
         #ofil['res'][:,x,:] = np.abs(igram[:] - igram_comp[:])
     
     #-------------------------------------------
@@ -162,10 +163,13 @@ ax1[0].set_title("RMS in interferogram\n reconstruction max= {}".format(
 ax1[1].set_title("Mean standard deviation\n of phases max= {}".format(
                                                 round(np.nanmax(mnpstd)))) 
 
-#fig1.tight_layout()
+#plot mean signed difference to see difference between noise and systematic biases
+fig2,ax2 = plt.subplots(1,1,figsize=(7.5,7.5))
+img2 = ax2.imshow(signdiff[:],vmin=np.nanpercentile(signdiff[:],2),vmax=np.nanpercentile(signdiff[:],98))
+plt.colorbar(img2,ax=ax2,shrink=0.6,aspect=15,orientation='horizontal')
+ax2.set_title("Mean signed difference in\n interfero reconstruction")
 
-
-#plot reconstituted and real igram 
+#plot sample reconstituted and real igram 
 fig,ax = plt.subplots(2,3,figsize=(10,7))
 ax = ax.ravel()
 plt.suptitle("Residual (=reconstructed minus real) (top) and\n real (bottom) interferograms")
@@ -208,5 +212,6 @@ resol = 200
 
 fig.savefig(os.path.join(locfig, 'Data_interfero_sample.png'),dpi=resol)
 fig1.savefig(os.path.join(locfig, 'RMS_kf.png'),dpi=resol)
+fig2.savefig(os.path.join(locfig, 'MeanSignedDiff_kf.png'),dpi=resol)
 plt.close('all')
 

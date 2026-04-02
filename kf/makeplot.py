@@ -94,7 +94,7 @@ def plot_param_2D(figname, m, L, xv, yv, bounds=None, names=None, axlim=None, cm
                 bounds[i] = [np.nanpercentile(m[:,:,i],1,interpolation='higher'),\
                                 np.nanpercentile(m[:,:,i],99,interpolation='higher')]
             elif norm =='log':
-                bounds[i] = [np.nanmin(m[:,:,i]),np.nanmax(m[:,:,i])]
+                bounds[i] = [np.nanmin(m[:,:,i][m[:,:,i]!=0.0]),np.nanmax(m[:,:,i])]
         print("bounds",bounds)
         
     #Plot retrieved parameters map
