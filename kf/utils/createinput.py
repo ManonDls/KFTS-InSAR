@@ -110,8 +110,8 @@ class SynteticKF(object):
         perpendicular baseline constraints.
             * rr    : float       
                     variance in data (std**2)
-            * sig_i : float 
-                    std of noise on phase differences 
+            * sig_i : float    
+                    std of noise on phase differences
             * t_sep : integer, optional     
                     time separation allowed
             * perp_dist : float, optional

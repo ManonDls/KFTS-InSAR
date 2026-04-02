@@ -8,7 +8,6 @@ import os
 import sys  
 import h5py
 import time as TIME 
-import random
 
 # Local stuff
 import kf
@@ -484,7 +483,7 @@ class RunKalmanFilter(object):
 if __name__ == '__main__':
     
     #First get file name from inline argument
-    parser = argparse.ArgumentParser(description = 'InSAR Time series analysis with a Kalman Filter')
+    parser = argparse.ArgumentParser( description = 'InSAR Time series analysis with a Kalman Filter')
     parser.add_argument(
         '-c', 
         type=str, 

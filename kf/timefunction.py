@@ -31,6 +31,7 @@ class TimeFct(object):
             * *originTime* : origin of the time used here
             * *model*      : contain string of function and associated parameters \
                              with syntax described in table below
+            * *verbose* : print wordy description of the building block of the model (True or False)
             
         ========================================    ========================
          model =                                     description
@@ -63,7 +64,7 @@ class TimeFct(object):
         self.check = False         #has the model been checked? 
         self.verbose = verbose
         self.flag = []
-    
+
     def check_model(self):
         ''' 
         Verify number of parameters are consistent and write down summary of model description
@@ -762,25 +763,25 @@ class TimeFct(object):
                 label[k] = 'Offset\n (%s)'%unit
                 k += 1
                 if mod[1] >= 1:
-                    label[k] = 'Velocity\n $(%s/year)$'%unit
+                    label[k] = 'Velocity\n ({}/{})'.format(unit,tunit)
                     k += 1
                 if mod[1] >= 2:
                     for i in range(2,mod[1]+1):
-                        label[k] = 'Polynomial coef.\n $(mm/year^%d)$'%i
+                        label[k] = 'Polynomial coef.\n $({}/{}r^{})$'.format(unit,tunit,i)
                         k += 1
             elif mod[0] == 'LISEG':
                 label[k] =  'Offset\n (%s)'%unit  
                 k +=1
                 for i in range(1,len(mod)):
                     if i < len(mod)-1:
-                        label[k] = "Velocity from {}\n to {} $({}/year)$".format(mod[i],mod[i+1],unit)
+                        label[k] = "Velocity from {}\n to {} $({}/{})$".format(mod[i],mod[i+1],unit,tunit)
                     else : 
-                        label[k] = "Velocity from {}\n to {} $({}/year)$".format(mod[i],self.t[-1],unit)
+                        label[k] = "Velocity from {}\n to {} $({}/{})$".format(mod[i],self.t[-1],unit,tunit)
                     k += 1
                     
             elif mod[0] in ('COS','COSINE'):
                 if phase== True:
-                    label[k] = 'Phase shift\n '
+                    label[k] = 'Phase shift\n ({} x365)'.format(tunit)
                     k += 1
                 else : 
                     label[k] = 'Amplitude of cosine\n (%s)'%unit

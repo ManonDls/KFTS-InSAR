@@ -385,10 +385,10 @@ class SetupKF(object):
         '''
         
         # Make mask
-        if self.verbose:
+        if self.rank==0 and self.verbose:
             print('-- Masking elements with little data --')
         
-        mask = np.zeros(self.igram.shape[1:]) #(dy,x)
+        mask = np.zeros(self.igram.shape[1:]) #(y,x)
         
         for j in range(0, self.Nx, chunks):    #itterate through blocks of 
             end = np.min([self.igram.shape[2], j+chunks])
@@ -410,7 +410,8 @@ class SetupKF(object):
         else:
             self.mask = mask
         
-        print('Selected pixels :',int(np.sum(self.mask)),'so',\
+        if self.verbose :
+            print('Selected pixels :',int(np.sum(self.mask)),'so',\
                         round(np.sum(self.mask)/(float(self.Nx*self.Ny))*100.,1),'%',
                         "-for worker",self.rank)
                                 
@@ -428,7 +429,7 @@ class SetupKF(object):
         NOT ADAPTED FOR MPI USE YET
         '''
         
-        if self.verbose:
+        if self.rank==0 and self.verbose:
             print('-- Selecting fault zone --')
         
         mask = np.zeros(self.igram.shape[1:])
@@ -445,7 +446,7 @@ class SetupKF(object):
         else:
             self.mask = mask
         
-        if self.verbose:
+        if self.verbose and self.rank == 0:
             print(self.rank,'Selected pixels :',int(np.sum(mask)),'so',\
                             round(np.sum(self.mask)/(float(self.Nx*self.Ny))*100.,2),'%')
 
@@ -465,7 +466,7 @@ class SetupKF(object):
         
         self.max_tsep = int(max(((self.imoins-self.iplus)**2)**(1/2.)))
         
-        if self.verbose:
+        if self.rank==0 and self.verbose:
             print('max step separation btwn interfero',self.max_tsep)
         
         return 
@@ -492,7 +493,7 @@ class SetupKF(object):
     def summary(self):
         '''Print data properties '''
 
-        if self.verbose:
+        if self.rank==0 and self.verbose:
             init = dt.datetime.fromordinal(self.orddates[0])
             last = dt.datetime.fromordinal(self.orddates[-1])
             print("-- Data summary --")
@@ -534,7 +535,6 @@ def initiatefileforKF(statefile, phasefile, L, data, model, store,
         :toverlap:  number of overlaping timesteps with past solution (only if restart KF)
         :tshift:    number of previously estimated phases (may be updated)
     '''
-    
    
     lent = data.time.shape[0] + toverlap #length of saved record for latter update
     newt = lent - tshift                 #length of new optimized time steps

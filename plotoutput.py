@@ -220,7 +220,7 @@ if VOLC :
 #Initiate model class
 mod = TimeFct(dates,model,verbose=True)
 mod.check_model()
-parm_names = mod.get_label(L,'mm')
+parm_names = mod.get_label(L,'mm',tunit='year')
 
 #--------------------------------------------------------------------
 # Clean and define new arrays
@@ -233,7 +233,6 @@ errors = np.sqrt(np.diagonal(prm_std,axis1=2,axis2=3))
 # Mask by RMS
 if RMS:
     mask = (rms > args.rmsTh)
-    parms[mask,:] = np.nan
     disp[mask]    = np.nan
     errors[mask,:] = np.nan
     derr[mask]     = np.nan
@@ -242,15 +241,11 @@ if RMS:
 parms[parms ==0.0] = np.nan 
 errors[errors==0.0] = np.nan
 
-## Mask point with error > mean +/- 2*std
-#mask2 = derr > 2*np.nanstd(derr)
-#derr[mask2] = np.nan
-#disp[mask2] = np.nan
-
 #for i in range(L):
-    #mask3 = abs(errors[:,:,i]-np.nanmean(errors[:,:,i])) > 2*np.nanstd(errors[:,:,i])
-    #parms[:,:,i][mask3] = np.nan
-    #errors[:,:,i][mask3] = np.nan
+#    print("For {} mask points with error larger than {}".format(parm_names[i],2*np.nanstd(errors[:,:,i])))
+#    mask3 = abs(errors[:,:,i]-np.nanmean(errors[:,:,i])) > 2*np.nanstd(errors[:,:,i])
+#    parms[:,:,i][mask3] = np.nan
+#    errors[:,:,i][mask3] = np.nan
 
 #---------------------------------------------------------------
 ## Draw and plot profiles 
@@ -276,7 +271,7 @@ dates = dates[:] + frstdat
 
 if args.ampshift : 
     ampphase,ampphase_err = mod.comp_phase_shift(params, P=prm_std)
-    parm_names
+    parm_names = mod.get_label(L,'mm',tunit='year',phase=True)
 
 ########## Parameter maps with uncertainties
 cm = plt.get_cmap('RdBu_r').copy()
@@ -287,9 +282,10 @@ cmerr.set_bad(color='0.8')
 
 
 if args.ampshift:
-    parm_names = mod.get_label(L,'mm',phase=True)
     indoy = ((ampphase[:,:,-1]+np.pi/2)*365/(2*np.pi))%365
     ampphase[:,:,-1] = indoy
+    if RMS: 
+        ampphase[mask,:] = np.nan
     mplt.plot_param_2D(os.path.join(locfig, 'outputparamsKF.png'), ampphase, L, xv, yv, cm=cm, 
                         names=parm_names, axlim=[minlon,maxlon,minlat,maxlat],
                         bounds= [[-10000,10000],[-5,5],[0,5],[0,365]])
@@ -298,7 +294,10 @@ if args.ampshift:
                         L, xv, yv, cm=cmerr, norm='log', 
                         names=parm_names, axlim=[minlon,maxlon,minlat,maxlat])
 else : 
-    mplt.plot_param_2D(locfig+'outputparamsKF.png', parms, L, xv, yv, cm=cm,
+    parms2map = parms.copy() # do not mask parameters for time series
+    if RMS:
+        parms2map[mask,:] = np.nan
+    mplt.plot_param_2D(locfig+'outputparamsKF.png', parms2map, L, xv, yv, cm=cm,
                         names=parm_names, axlim=[minlon,maxlon,minlat,maxlat])
     mplt.plot_param_2D(locfig+'outputstd.png', errors, L, xv, yv, cm=cmerr, norm='log',
                         names=parm_names, axlim=[minlon,maxlon,minlat,maxlat])
@@ -310,8 +309,8 @@ Xpxl= np.random.randint(0,nx-1,size=Npix)
 pixels = [(i,j)for i,j in zip(Ypxl,Xpxl)]
 letter = ['A','B','C','D','E','F']
 
-#mplt.plot_TS(os.path.join(locfig, 'timeseries_randpxls_one.png'), dates, phases, ph_std,
-#            pixel=pixels, model=model, params=parms[:], label=letter)
+mplt.plot_TS(os.path.join(locfig, 'timeseries_randpxls_one.png'), dates, phases, ph_std,
+            pixel=pixels, model=model, params=params[:], label=letter)
 
 fig0,ax0 = plt.subplots(1,len(pixels),figsize=(11,2.9),sharex=True,sharey=True)
 ax0 = ax0.ravel()
@@ -361,7 +360,7 @@ cm.set_bad(color='0.8')
 
 Vmin, Vmax = np.nanpercentile(disp,1), np.nanpercentile(disp,99)
 disp[disp==0]=np.nan
-img0 = ax.pcolormesh(xv,yv,disp,vmin=-25,vmax=25,cmap=cm) 
+img0 = ax.pcolormesh(xv,yv,disp,vmin=Vmin,vmax=Vmax,cmap=cm) 
 ax.set_aspect(1)
 
 plt.plot(xv[Ypxl,Xpxl],yv[Ypxl,Xpxl],'sk',markersize=2)
@@ -384,7 +383,8 @@ if VOLC :
             ax.text(lonvolc[i],latvolc[i]+0.01,namevolc[i],
                         fontsize=9,horizontalalignment='center')
 
-plt.colorbar(img0,ax=ax,shrink=0.7)
+plt.title("Cumulated displacement with respect to first date {:4.2f}\nat time {:4.2f} (one before last)".format(frstdat,dates[-2]))
+plt.colorbar(img0,ax=ax,shrink=0.7,label="(mm)")
 #refframe = np.array([[2855,208],[2057,623],[1367,848],[837,879],[1035,618],[1409,355],
 #                        [1916,0],[119,0],[119,1600],[2300,1600],[2855,1050],[2855,208]]) #y,x
 #plt.plot(refframe[:,1],refframe[:,0],'k--')

@@ -3,6 +3,11 @@
 # Compute RMS of the KF solution (Phases.h5) and store it in H5 file 
 # Use same config file as KFTS to locate evrything easily
 #
+#    This RMS is a measure of the fit to the data (interferograms), like closure phase residual.
+#    High misfit/RMS reveals inconsistencies between interferograms.
+#    Such error may originate from bad unwrapping or, in a lesser extent,
+#     from multilooking in heterogeneous windows
+#
 # For plotting with GMT need to cenvert *.h5 in *.grd
 # Manon Dalaison 2020
 #######################################################################
@@ -13,6 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 #from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from matplotlib.colors import LogNorm
+import datetime as dt
 import time as TIME
 import h5py
 import sys,os
@@ -49,11 +55,11 @@ config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolat
 config.read(args.config)
 
 loc      = config['INPUT'].get('workdir', fallback='./')
-procfile = loc + config['INPUT'].get('infile')
+procfile = os.path.join(loc,config['INPUT'].get('infile'))
 fmtfile  = config['INPUT'].get('fmtfile', fallback='ISCE')
 
-outdir = loc + config['OUTPUT'].get('outdir', fallback='')
-locfig = loc + config['OUTPUT'].get('figdir', fallback='')
+outdir = os.path.join(loc,config['OUTPUT'].get('outdir', fallback=''))
+locfig = os.path.join(loc,config['OUTPUT'].get('figdir', fallback=''))
 
 subregion=None
 TRUNCDATA=False
@@ -70,8 +76,9 @@ if config.has_section('FOR TESTING'):
 infile = os.path.join(outdir,'Phases.h5')
 
 # Output
-outfile = os.path.join(outdir,'RMS_map.h5')
-
+outfile = os.path.join(outdir,'RMS_map.h5')       #store usefull quality estimator
+tmpfile = os.path.join(outdir,'recons_interf.h5')   #file that can be deleted latter
+                                                                         #used to save flash memory
 
 ######################## Import and read data ##################################
 ## Interferograms
@@ -79,6 +86,7 @@ print("** Read Data **")
 data = infmt.SetupKF(procfile, fmt=fmtfile, subregion=subregion)
 data.get_interf_pairs()
 Nint = data.igram.shape[0]
+width, length = data.igram.shape[1:]
 
 ## Phase evolution from KFTS
 print('Opening {}'.format(infile))
@@ -90,21 +98,24 @@ mnpstd   = np.mean(phas_std,axis=2)
 if args.read : 
     # Read existing file
     print("** Read RMS file **")
-    ofil  = h5py.File(outfile,'r')   
-    igram_comp = ofil['igram_comp']
+    ofil       = h5py.File(outfile,'r') 
+    tfil        = h5py.File(tmpfile,'r')
+    igram_comp = tfil['igram_comp']
     rms        = ofil['rms']
-
+    perigram   = ofil['errperigram']
     print("\n** Start plots **")
 
 else:
     # Open new file 
-    ofil       = h5py.File(outfile,'w')    
+    ofil    = h5py.File(outfile,'w')    
+    tfil     = h5py.File(tmpfile,'w')
 
     # Create new datasets
-    igram_comp = ofil.create_dataset('igram_comp',data.igram.shape, dtype='float32')
+    igram_comp = tfil.create_dataset('igram_comp',data.igram.shape, dtype='float32')
     rms        = ofil.create_dataset('rms',data.igram.shape[1:], dtype='float32')
+    perigram   = ofil.create_dataset('errperigram',data.igram.shape[0], dtype='float32')
     signdiff   = ofil.create_dataset('signdiff',data.igram.shape[1:], dtype='float32')
-    #res        = ofil.create_dataset('res',igram.shape, dtype='float32')
+
 
     ############## Reconstitute interferograms and compute RMS #####################
 
@@ -117,13 +128,13 @@ else:
     for ip,im in zip(data.iplus,data.imoins):
         sys.stdout.write('\r {}/{}'.format(i,Nint))
         sys.stdout.flush()
-        ofil['igram_comp'][i,:,:] = phases[:,:,np.array(ip)]-phases[:,:,np.array(im)] 
+        tfil['igram_comp'][i,:,:] = phases[:,:,np.array(ip)]-phases[:,:,np.array(im)] 
         i +=1
 
     print("\n Time for reconstitution {}".format(TIME.time() - start_time))
 
     numbint = np.zeros((data.Ny,data.Nx))
-    print("** Compute RMS **")
+    print("** Compute RMS map **")
     for x in range(0,data.Ny):
         sys.stdout.write('\r {}/{}'.format(x,data.Ny))
         sys.stdout.flush()
@@ -137,8 +148,11 @@ else:
         #compute RMS
         ofil['rms'][x,:] = np.sqrt(np.nansum((data.igram[:,x,:] - igram_comp[:,x,:])**2,axis=0)/N)
         ofil['signdiff'][x,:] = np.nansum((data.igram[:,x,:] - igram_comp[:,x,:]),axis=0)/N
-        #ofil['res'][:,x,:] = np.abs(igram[:] - igram_comp[:])
     
+    print("** Compute RMS per interferogram **")
+    for x in range(Nint):
+        ofil['errperigram'][x] = np.nanmean(abs(data.igram[x,:,:] - igram_comp[x,:,:])) 
+
     #-------------------------------------------
     print("\n** Start plots **")
 
@@ -146,12 +160,13 @@ else:
     ax2 = plt.gca()
     img = ax2.imshow(numbint)
     plt.colorbar(img,ax=ax2)
-    fig2.savefig(locfig+"Numb_interf.png",dpi=150)
+    fig2.savefig(os.path.join(locfig,"Numb_interf.png"),dpi=150)
 
 
-#plot RMS and estimated error
+#---------------------------------------------------------------------------------------------------------
+#plot RMS map and mean posterior error per pixel
+
 fig1,ax1 = plt.subplots(1,2,figsize=(11,7.5),sharex=True,sharey=True)
-
 img0 = ax1[0].imshow(rms[:],vmin=np.nanpercentile(rms[:],2),vmax=np.nanpercentile(rms[:],98))#,norm=LogNorm(vmin=0.001,vmax=50))
 img1 = ax1[1].imshow(mnpstd,norm=LogNorm(vmin=0.001,vmax=50))
 
@@ -163,12 +178,35 @@ ax1[0].set_title("RMS in interferogram\n reconstruction max= {}".format(
 ax1[1].set_title("Mean standard deviation\n of phases max= {}".format(
                                                 round(np.nanmax(mnpstd)))) 
 
+#---------------------------------------------------------------------------------------------------------
 #plot mean signed difference to see difference between noise and systematic biases
-fig2,ax2 = plt.subplots(1,1,figsize=(7.5,7.5))
-img2 = ax2.imshow(signdiff[:],vmin=np.nanpercentile(signdiff[:],2),vmax=np.nanpercentile(signdiff[:],98))
-plt.colorbar(img2,ax=ax2,shrink=0.6,aspect=15,orientation='horizontal')
-ax2.set_title("Mean signed difference in\n interfero reconstruction")
 
+fig3,ax3 = plt.subplots(1,1,figsize=(7.5,7.5))
+img3 = ax3.imshow(signdiff[:],vmin=np.nanpercentile(signdiff[:],2),vmax=np.nanpercentile(signdiff[:],98))
+plt.colorbar(img3,ax=ax3,shrink=0.6,aspect=15,orientation='horizontal')
+ax3.set_title("Mean signed difference in\n interfero reconstruction")
+
+#---------------------------------------------------------------------------------------------------------
+#plot RMS per interferogram (over time on arbitrary axis)
+
+# produce labels
+dates     = [dt.datetime.fromordinal(Dat) for Dat in data.orddates]
+dates_str = [str(Dat.year)+ '%02d' % Dat.month + '%02d' % Dat.day for Dat in dates]
+datepairs =  [dates_str[i]+'_'+dates_str[j] for i,j in zip(data.iplus,data.imoins)]
+
+fig2 = plt.figure(figsize=(11,6))
+ax2 = plt.gca()
+ax2.plot(list(range(Nint)),perigram[:],'-o')
+RMSTh = np.nanmean(perigram)+ 2*np.nanstd(perigram)
+for i in range(Nint):
+    if abs(perigram[i])> RMSTh:
+        ax2.text(i,perigram[i],datepairs[i],fontsize=9)
+
+ax2.set_xlim(0,Nint)
+ax2.set_xlabel("Arbitrary interferogram number")
+ax2.set_ylabel("RMS error per interferogram (mm)")
+
+#---------------------------------------------------------------------------------------------------------
 #plot sample reconstituted and real igram 
 fig,ax = plt.subplots(2,3,figsize=(10,7))
 ax = ax.ravel()
@@ -185,33 +223,31 @@ for i in range(3):
 fig.tight_layout()
 
 ofil.close()
+tfil.close()
 
 #print runing time 
 print("--- {} seconds ---".format(TIME.time() - start_time))
 
 # Cut lon and lat products
-if args.lonfile is not None:
-        width = data.fin['figram'].shape[2]
-        length = data.fin['figram'].shape[1]
-        lon = np.fromfile(args.lonfile, 'f').reshape((length, width))[y1:y2,x1:x2]
-        lon.astype('f').tofile(os.path.join(outdir, 'lon.flt'))
-if args.latfile is not None:
-        width = data.fin['figram'].shape[2]
-        length = data.fin['figram'].shape[1]
-        lat = np.fromfile(args.latfile, 'f').reshape((length, width))[y1:y2,x1:x2]
-        lat.astype('f').tofile(os.path.join(outdir, 'lat.flt'))
-if args.losfile is not None:
-        assert False, 'Need to finalize this los cutting thing in PrepIgramStack first'
-        width = data.fin['figram'].shape[2]
-        length = data.fin['figram'].shape[1]
-        los = np.fromfile(args.losfile, 'f').reshape((length, width))[y1:y2,x1:x2]
-        los.astype('f').tofile(os.path.join(outdir, 'los.flt'))
+if config.has_section('FOR TESTING'):
+    if SUBREGION:
+        if args.lonfile is not None:
+            lon = np.fromfile(args.lonfile, 'f').reshape((length, width))[y1:y2,x1:x2]
+            lon.astype('f').tofile(os.path.join(outdir, 'lon.flt'))
+        if args.latfile is not None:
+            lat = np.fromfile(args.latfile, 'f').reshape((length, width))[y1:y2,x1:x2]
+            lat.astype('f').tofile(os.path.join(outdir, 'lat.flt'))
+        if args.losfile is not None:
+            assert False, 'Need to finalize this los cutting thing in PrepIgramStack first'
+            los = np.fromfile(args.losfile, 'f').reshape((length, width))[y1:y2,x1:x2]
+            los.astype('f').tofile(os.path.join(outdir, 'los.flt'))
 
 ######################## Save Figures ##########################################
-resol = 200
+resol = 300
 
 fig.savefig(os.path.join(locfig, 'Data_interfero_sample.png'),dpi=resol)
 fig1.savefig(os.path.join(locfig, 'RMS_kf.png'),dpi=resol)
-fig2.savefig(os.path.join(locfig, 'MeanSignedDiff_kf.png'),dpi=resol)
+fig2.savefig(os.path.join(locfig,'RMS_per_interfero.png'),dpi=resol)
+fig3.savefig(os.path.join(locfig, 'MeanSignedDiff_kf.png'),dpi=resol)
 plt.close('all')
 

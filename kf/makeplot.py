@@ -13,7 +13,7 @@ import scipy.linalg as la
 import scipy.interpolate as sciint
 
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as mcm
@@ -123,10 +123,6 @@ def plot_param_2D(figname, m, L, xv, yv, bounds=None, names=None, axlim=None, cm
         cb = fig.colorbar(img0,ax=ax[i],shrink=0.4,aspect=22)
         ax[i].set_title(param_names[i],fontsize=11)
         ax[i].set_aspect(1)
-        if i == 1:
-            cb.set_label('mm/yr')
-        else:
-            cb.set_label('mm')
     
         # Bound axes
         if axlim is not None:
@@ -429,11 +425,11 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
 
     # Filter out absurd lon lat by cutting top and bottom 
     # because pcolormesh cannot deal with NaN in xv or yv 
-    '''mask = (lat<minlat) & (lon<minlon)
-    lon[mask] = np.nan
+    mask = (lat<minlat) & (lon<minlon)
+    #lon[mask] = np.nan
 
     # Eliminate rows containing NaNs 
-    line_av = np.mean(lon,axis=1)
+    '''line_av = np.mean(lon,axis=1)
     idx_fin = np.where(np.isfinite(line_av))[0] # indices of rows filled with finite values
     top,bot = idx_fin[0], idx_fin[-1]
     
@@ -444,7 +440,7 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
         igrams  = igrams[:,top:bot,:]
     elif time_ax==-1 or time_ax==2:
         igrams  = igrams[top:bot,:,...]
-   ''' 
+    '''
     if zoom is not None:
         print("Cut image to zoom")
         x1,x2,y1,y2 = zoom
@@ -461,18 +457,21 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
         print("bounds",bounds)
 
     #Get appropriate size for Figure
-    aratio = (np.max(lon)-np.min(lon))/(np.max(lat)-np.min(lat))
-    scale = 10
+    aratio = (np.max(lon[~mask])-np.min(lon[~mask]))/(np.max(lat[~mask])-np.min(lat[~mask]))
+    aratio = min(aratio,4)
+    scale = 5
     
     for i in interf_list:
         print("Interferogram",i)
-        fig = plt.figure(figsize=(aratio*scale,1/aratio*scale))   
+        fig = plt.figure(figsize=(aratio*scale, scale))   
         
         if time_ax==0:
-            plt.pcolormesh(lon, lat, igrams[i,:,:],vmin=bounds[0],vmax=bounds[1],cmap=cm)
+            toplot = igrams[i,:,:]
         elif time_ax==-1 or time_ax==2:
-            plt.pcolormesh(lon, lat, igrams[:,:,i],vmin=bounds[0],vmax=bounds[1],cmap=cm)
-        
+            toplot = igrams[:,:,i] 
+        toplot[mask] = np.nan
+        plt.pcolormesh(lon, lat, toplot,vmin=bounds[0],vmax=bounds[1],cmap=cm)
+
         if labels is None:
             plt.text(0.1,0.05,str(i),color='r',transform=plt.gca().transAxes)
         else :
@@ -483,15 +482,15 @@ def plot_interfs(igrams,lonfile,latfile,interf_list,figfile='./',minlat=1e-3,min
                 lonflt,latflt = fault
                 plt.plot(lonflt,latflt,'k-',linewidth=0.8)
         
-        plt.xlim(np.nanmin(lon),np.nanmax(lon))
-        plt.ylim(np.nanmin(lat),np.nanmax(lat))
-        plt.colorbar()
+        plt.xlim(np.min(lon[~mask]),np.max(lon[~mask]))
+        plt.ylim(np.min(lat[~mask]),np.max(lat[~mask]))
+        plt.colorbar(shrink=0.6)
         plt.tight_layout()
         
         if labels is None:
-            fig.savefig(figfile +'interfero_' +str(i) +'.png', dpi=100)
+            fig.savefig(figfile +'interfero_' +str(i) +'.png', dpi=130)
         else:
-            fig.savefig(figfile +'interfero_'+labels[i] +'.png', dpi=100)
+            fig.savefig(figfile +'interfero_'+labels[i] +'.png', dpi=130)
         
         plt.close('all')
 

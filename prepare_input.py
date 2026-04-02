@@ -42,9 +42,12 @@ class GetConfig(object):
         #----------------------------------------------
         secIN = config['INPUT']
         self.loc = secIN.get('workdir', fallback='./')
-        self.baselinedir = self.loc + secIN.get('baselinedir', fallback='')
-        self.igramsdir = self.loc + secIN.get('igramsdir', fallback='')
-        
+        self.baselinedir = os.path.join(self.loc, secIN.get('baselinedir', fallback=''))
+        self.igramsdir = os.path.join(self.loc, secIN.get('igramsdir', fallback=''))
+
+        self.basename = secIN.get('basename', fallback='filt_ECMWF_ERA-5_fine')
+        self.noatmoname = secIN.get('noatmoname', fallback='filt_fine')
+ 
         self.unwfmt = secIN.get('unwfmt', fallback='ISCE')
 
         #optional arguments, None otherwise
@@ -78,7 +81,7 @@ class GetConfig(object):
         secOU = config['OUTPUT']
         self.verbose = secOU.getboolean('verbose', fallback = False)
         self.outdir = secOU.get('outdir', fallback='./')
-        self.outfile = self.outdir + secOU.get('outfile', fallback ='PROC-STACK.h5')
+        self.outfile = os.path.join(self.outdir, secOU.get('outfile', fallback ='PROC-STACK.h5'))
         
         if self.verbose:
             print("Input directory is {}, output directory is {}".format(self.loc,self.outdir))
@@ -131,8 +134,7 @@ class GetConfig(object):
 #Create IFG list
 
 def getPairs(igramsDir):
-    '''
-    Get the two dates of each interferogram
+    '''Get the two dates of each interferogram
     produced by ISCE, in Igram directory.'''
     
     # Get pairs
@@ -249,7 +251,7 @@ def save2file(dates1, dates2, outfile, dateList = None, baselineList = None, sat
 #--------------------------------------------------------------------------     
 #Find path of interferograms 
 
-def makefnames(dirname, dates1,dates2):
+def makefnames(dirname, dates1,dates2, basename='filt_ECMWF_ERA-5_fine', noatmoname='filt_fine'):
     '''
     Generates paths to the files needed for creating the stack.
     .. Args:
@@ -259,24 +261,23 @@ def makefnames(dirname, dates1,dates2):
         * iname      - Path to the unwrapped interferogram
         * cname      - Path to the coherence file'''
 
-    if os.path.exists('%s/%s_%s/filt_ECMWF_ERA-5_fine_corrected.unw'%(dirname,dates1,dates2)):
-        iname = '%s/%s_%s/filt_ECMWF_ERA-5_fine_corrected.unw'%(dirname,dates1,dates2)
-        cname = '%s/%s_%s/filt_ECMWF_ERA-5_fine.cor'%(dirname,dates1,dates2)
+    if os.path.exists('{}/{}_{}/{}_corrected.unw'.format(dirname,dates1,dates2,basename)):
+        iname = '{}/{}_{}/{}_corrected.unw'.format(dirname,dates1,dates2,basename)
+        cname = '{}/{}_{}/{}.cor'.format(dirname,dates1,dates2,basename)
 
-    elif os.path.exists('%s/%s_%s/filt_ECMWF_ERA-5_fine.unw'%(dirname,dates1,dates2)):
+    elif os.path.exists('{}/{}_{}/{}.unw'.format(dirname,dates1,dates2,basename)):
         print('No unwrapping error correction for dates: {}-{}'.format(dates1,dates2))
-        iname = '%s/%s_%s/filt_ECMWF_ERA-5_fine.unw'%(dirname,dates1,dates2)
-        cname = '%s/%s_%s/filt_ECMWF_ERA-5_fine.cor'%(dirname,dates1,dates2)
+        iname = '{}/{}_{}/{}.unw'.format(dirname,dates1,dates2,basename)
+        cname = '{}/{}_{}/{}.cor'.format(dirname,dates1,dates2,basename)
 
-    elif os.path.exists('%s/%s_%s/filt_fine.unw'%(dirname,dates1,dates2)):
+    elif os.path.exists('{}/{}_{}/{}.unw'.format(dirname,dates1,dates2,noatmoname)):
         print('No atmospheric corection for dates: {}-{}'.format(dates1,dates2))
-        iname = '%s/%s_%s/filt_fine.unw'%(dirname,dates1,dates2)
-        cname = '%s/%s_%s/filt_fine.cor'%(dirname,dates1,dates2)
+        iname = '{}/{}_{}/{}.unw'.format(dirname,dates1,dates2,noatmoname)
+        cname = '{}/{}_{}/{}.cor'.format(dirname,dates1,dates2,noatmoname)
 
     else :
-        print('%s/%s_%s/filt_fine.unw'%(dirname,dates1,dates2))
         print('No igram detected for dates: {}-{}'.format(dates1,dates2))
-        
+
     return iname,cname
 
 #--------------------------------------------------------------------------   
@@ -608,16 +609,18 @@ if __name__ == '__main__':
     scl = 1000 *args.wvl/(4*np.pi) ####Converting to mm.
                 
     for k in range(Nifg):
+
         if args.ilist is None:
             #####File names not provided as input
-            iname,cname = makefnames(args.igramsdir,dates[k,0],dates[k,1]) #cname may not exist at this stage
+            iname,cname = makefnames(args.igramsdir,dates[k,0],dates[k,1],
+                                     basename=args.basename, noatmoname=args.noatmoname) #cname may not exist at this stage
         else:
             #####File names provided in input file
             iname = args.ilist[k]
             if args.cthresh > 0.0:
                 cname = args.clist[k]
         if args.verbose: 
-            print("Interferogram {}/{}: {} {}".format(k, Nifg, dates1[k], dates2[k]))
+            print("Interferogram {}/{}: {}_{} {}".format(k, Nifg, dates1[k], dates2[k], iname))
 
         #----------------------------------------------------------------
         # READ IGRAM
